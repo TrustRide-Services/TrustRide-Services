@@ -9,8 +9,8 @@
 -- ENGINE ID            : 0fc9e941-4725-43bd-b5eb-6ea76a66046a
 -- ENGINE CODE          : TRS026_ENG001_FDN
 -- ENGINE DOMAIN        : Foundation
--- ENGINE CLASS         : Constitutional / Sovereign
--- ENGINE TYPE          : Layer 1 -- Foundation (Plate II)
+-- ENGINE CLASS         : Foundation Engine
+-- ENGINE TYPE          : Constitutional Runtime
 -- ENGINE NAME          : TrustRide Foundation
 -- ENGINE DESCRIPTION   : The sovereign platform brain -- identity, authority,
 --                        audit, vocabulary, geography, sequence, and the
@@ -59,6 +59,11 @@
 --   5. Role naming is aligned to the same `trs026_eng{NNN}_{abbrev}_service`
 --      pattern Engines 2-11 already use, replacing the inconsistent
 --      short-form `trs_fdn_service` / `trs_fdn_audit_service` Annex H used.
+--   6. ENGINE CLASS / ENGINE TYPE (Foundation Engine / Constitutional
+--      Runtime) reflect the Founder's Sovereign Engine Registry, adopted
+--      2026-08-21 as an amendment to FDN-001 Annex C -- superseding the
+--      "Layer 1 -- Foundation (Plate II)" placeholder used before that
+--      registry existed (Annex D.1's own template left this field blank).
 
 -- ============================================================================
 -- PHASE 0 -- EXTENSIONS
