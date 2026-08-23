@@ -513,7 +513,7 @@ BEGIN
   RETURNING prefix, current_value, padding INTO v_prefix, v_next, v_padding;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'fn_sequence_next: unregistered sequence_code %% (Article 42.5 -- no engine generates its own numbering)', p_sequence_code;
+    RAISE EXCEPTION 'fn_sequence_next: unregistered sequence_code % (Article 42.5 -- no engine generates its own numbering)', p_sequence_code;
   END IF;
 
   RETURN v_prefix || '-' || lpad(v_next::TEXT, v_padding, '0');
