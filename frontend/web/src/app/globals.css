@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+/* TrustRide corporate design tokens -- navy + gold, pulled from the real
+   brand mark (public/trustride-logo.png): the logo's own indigo-navy swoosh
+   and gold "S" are the source of truth for these two accents. Founder
+   direction: "gold and navy blue mix with other corporate colour... not a
+   blue screen with funny cards." Ported from the prior Expo app's theme.ts
+   -- same palette, now as Tailwind v4 CSS tokens. */
+:root {
+  --bg-deepest: #0a0f1c;
+  --bg: #0d1526;
+  --surface: #131f36;
+  --surface-elevated: #1a2c4a;
+  --border: #26395c;
+
+  --navy: #161f45;
+  --navy-light: #2a3570;
+  --gold: #d4af37;
+  --gold-light: #e8ca6a;
+  --gold-pressed: #b8932a;
+
+  --text-primary: #f4f1e8;
+  --text-secondary: #a9b6ca;
+  --text-muted: #7488a3;
+  --on-gold: #161018;
+
+  --success: #3fa66c;
+  --danger: #e0715f;
+  --danger-bg: #2a1414;
+}
+
+@theme inline {
+  --color-bg-deepest: var(--bg-deepest);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border: var(--border);
+  --color-navy: var(--navy);
+  --color-navy-light: var(--navy-light);
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-gold-pressed: var(--gold-pressed);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-on-gold: var(--on-gold);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+}
+
+body {
+  background: var(--bg-deepest);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
