@@ -8,8 +8,12 @@ import { createClient } from "@/lib/supabase/client";
 
 // RENDERING STRATEGY: fully static. Pure client component -- no server
 // data, no cookies, identical HTML shipped to every visitor; Supabase auth
-// calls happen entirely in the browser after hydration.
-type Mode = "SIGN_IN" | "SIGN_UP" | "FORGOT_PASSWORD";
+// calls happen entirely in the browser after hydration. Sign-up is
+// deliberately NOT handled here -- it lives at /register, the one real
+// combined shell (name, ID, email, password) that also captures identity
+// details for verification. This page only ever authenticates an existing
+// account or resets its password.
+type Mode = "SIGN_IN" | "FORGOT_PASSWORD";
 
 function LoginForm() {
   const router = useRouter();
@@ -40,14 +44,6 @@ function LoginForm() {
 
     if (!email || !password) return setError("Enter both email and password.");
     setBusy(true);
-    if (mode === "SIGN_UP") {
-      const { error } = await supabase.auth.signUp({ email, password });
-      setBusy(false);
-      if (error) return setError(error.message);
-      setNotice("Account created. Check your email to confirm, then log in.");
-      setMode("SIGN_IN");
-      return;
-    }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) return setError(error.message);
@@ -55,8 +51,8 @@ function LoginForm() {
     router.refresh();
   };
 
-  const heading = mode === "SIGN_IN" ? "Log in" : mode === "SIGN_UP" ? "Create your account" : "Reset your password";
-  const buttonLabel = mode === "SIGN_IN" ? "Log In" : mode === "SIGN_UP" ? "Sign Up" : "Send reset link";
+  const heading = mode === "SIGN_IN" ? "Log in" : "Reset your password";
+  const buttonLabel = mode === "SIGN_IN" ? "Log In" : "Send reset link";
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center bg-bg-deepest px-6 py-16">
@@ -98,18 +94,13 @@ function LoginForm() {
 
         {mode === "SIGN_IN" && (
           <div className="flex flex-col items-center gap-2">
-            <button type="button" onClick={() => setMode("SIGN_UP")} className="text-gold-light font-semibold text-sm">
+            <Link href="/register" className="text-gold-light font-semibold text-sm">
               Need an account? Sign up
-            </button>
+            </Link>
             <button type="button" onClick={() => setMode("FORGOT_PASSWORD")} className="text-text-muted text-sm">
               Forgot password?
             </button>
           </div>
-        )}
-        {mode === "SIGN_UP" && (
-          <button type="button" onClick={() => setMode("SIGN_IN")} className="w-full text-gold-light font-semibold text-sm">
-            Already have an account? Log in
-          </button>
         )}
         {mode === "FORGOT_PASSWORD" && (
           <button type="button" onClick={() => setMode("SIGN_IN")} className="w-full text-gold-light font-semibold text-sm">
