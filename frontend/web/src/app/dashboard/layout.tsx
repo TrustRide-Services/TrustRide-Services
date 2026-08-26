@@ -9,6 +9,14 @@ const USER_TYPE_LABEL: Record<string, string> = {
   OPERATOR: "Operator",
 };
 
+// RENDERING STRATEGY: fully dynamic, deliberately not split with Suspense.
+// Every pixel this layout renders (nav visibility, user-type badge, display
+// name) depends on the same auth+profile+actor gate that also decides
+// whether to redirect away entirely -- there is no data-independent shell
+// to paint before that gate resolves, so streaming it wouldn't shorten
+// perceived load, only add complexity. Correctness of the gate (never
+// flash protected chrome to an unverified user) outweighs the marginal
+// perf a contrived split would buy here.
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();

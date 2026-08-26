@@ -1,17 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 
-// The true first screen -- rendered fresh on the server for every visit
-// (this whole app is dynamic, no static export). Already-signed-in
-// visitors are sent straight to /dashboard rather than seeing the pitch
-// again.
-export default async function Home() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  if (data.user) redirect("/dashboard");
-
+// RENDERING STRATEGY: fully static. The already-signed-in redirect lives in
+// middleware.ts instead of a cookies()/auth.getUser() call in this
+// component, specifically so this page has zero per-request server work
+// and can be served from the CDN edge -- the marketing pitch is identical
+// for every anonymous visitor. See middleware.ts for the dynamic half of
+// this route.
+export default function Home() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center bg-bg-deepest px-6 py-16 relative">
       <div className="absolute top-0 left-0 right-0 h-[3px] bg-gold" />

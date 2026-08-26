@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { acceptQuotationAction } from "../actions";
 
@@ -24,7 +25,7 @@ async function AcceptQuotationButton({ quoteId }: { quoteId: string }) {
   );
 }
 
-export default async function OrdersPage() {
+async function OrdersList() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("business_order")
@@ -34,8 +35,7 @@ export default async function OrdersPage() {
   const orders = (data as MyOrder[]) ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-lg font-bold text-text-primary mb-4">Your orders</h1>
+    <>
       {error && <p className="rounded-lg bg-danger-bg text-danger text-sm p-2.5 mb-3">{error.message}</p>}
       {orders.length === 0 && !error && (
         <p className="text-text-muted text-center mt-10">No orders yet -- place one from the Request Service tab.</p>
@@ -52,6 +52,22 @@ export default async function OrdersPage() {
           </div>
         ))}
       </div>
+    </>
+  );
+}
+
+// RENDERING STRATEGY: hybrid. The heading is identical for every visitor and
+// carries no data dependency, so it's a plain static shell; the order list
+// is RLS-scoped to auth.uid() (genuinely per-user, uncacheable) and is
+// isolated in its own Suspense boundary so the shell paints immediately
+// while that query is still in flight.
+export default function OrdersPage() {
+  return (
+    <div className="max-w-2xl mx-auto">
+      <h1 className="text-lg font-bold text-text-primary mb-4">Your orders</h1>
+      <Suspense fallback={<p className="text-text-muted text-center mt-10">Loading your orders…</p>}>
+        <OrdersList />
+      </Suspense>
     </div>
   );
 }

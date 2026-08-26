@@ -25,7 +25,17 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
+  const { data: userData } = await supabase.auth.getUser();
+
+  // The one dynamic decision this route group needs: an already-signed-in
+  // visitor hitting the static "/" pitch is sent straight to /dashboard.
+  // Lives here (not in page.tsx) so the page itself stays a static Server
+  // Component with no per-request cookie read of its own.
+  if (userData.user && request.nextUrl.pathname === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
 
   return supabaseResponse;
 }

@@ -23,7 +23,6 @@ export default function RaiseIntentForm({ services, userTypeDomain }: { services
 
   return (
     <form action={formAction} className="max-w-xl">
-      <h1 className="text-lg font-bold text-text-primary mb-4">Request a service</h1>
       {state?.error && <p className="rounded-lg bg-danger-bg text-danger text-sm p-2.5 mb-3">{state.error}</p>}
 
       <p className="text-text-secondary text-sm mb-1.5">Service</p>

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import RaiseIntentForm from "./RaiseIntentForm";
 
@@ -9,7 +10,7 @@ import RaiseIntentForm from "./RaiseIntentForm";
 const BOOKABLE_CODES = new Set(["TRANSPORT-BODA-STANDARD"]);
 const LABELS: Record<string, string> = { "TRANSPORT-BODA-STANDARD": "Boda ride (Kisumu)" };
 
-export default async function RaiseIntentPage() {
+async function ServiceSelector() {
   const supabase = await createClient();
 
   const { data } = await supabase
@@ -33,5 +34,25 @@ export default async function RaiseIntentPage() {
     label: LABELS[s.service_code] ?? s.service_code,
   }));
 
+  if (services.length === 0) {
+    return <p className="text-text-muted text-center mt-10">No active services are published yet. Check back soon.</p>;
+  }
+
   return <RaiseIntentForm services={services} userTypeDomain={actor?.user_type_domain ?? "CUSTOMER"} />;
+}
+
+// RENDERING STRATEGY: hybrid. The heading is a static shell; the service
+// catalogue (near-static, changes rarely) and the caller's actor/user-type
+// (genuinely per-user) are both needed before the form can render sensibly,
+// so they're fetched together in one Suspense-streamed section rather than
+// forcing the whole page to block on them.
+export default function RaiseIntentPage() {
+  return (
+    <div className="max-w-xl">
+      <h1 className="text-lg font-bold text-text-primary mb-4">Request a service</h1>
+      <Suspense fallback={<p className="text-text-muted text-center mt-10">Loading services…</p>}>
+        <ServiceSelector />
+      </Suspense>
+    </div>
+  );
 }

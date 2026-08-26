@@ -15,6 +15,12 @@ const USER_TYPES = [
 // this page genuinely resolves on its own on a fresh server-rendered visit
 // -- "Check again" (a plain form resubmit) exists for the person, not
 // because anything requires manual polling.
+// RENDERING STRATEGY: fully dynamic. Which of the three states below
+// renders (pending / verified / rejected) is decided entirely by this
+// user's own verification_record and business_actor_registration rows --
+// there's no version of this page that's the same for two different
+// visitors, so the whole thing is a Server Component read straight from
+// the request's session, not a static shell candidate.
 export default async function VerifyPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error: bindError } = await searchParams;
   const supabase = await createClient();

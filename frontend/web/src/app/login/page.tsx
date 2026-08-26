@@ -6,6 +6,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
+// RENDERING STRATEGY: fully static. Pure client component -- no server
+// data, no cookies, identical HTML shipped to every visitor; Supabase auth
+// calls happen entirely in the browser after hydration.
 type Mode = "SIGN_IN" | "SIGN_UP" | "FORGOT_PASSWORD";
 
 function LoginForm() {
