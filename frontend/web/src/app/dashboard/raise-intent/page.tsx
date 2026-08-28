@@ -1,6 +1,13 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import RaiseIntentForm from "./RaiseIntentForm";
+
+// Only CUSTOMER_APP and PARTNER_APP carry the RAISE_INTENT verb in
+// present_shell_capability_registry -- Governor and Intermediary don't, so
+// this route isn't offered to them in the nav, and is guarded here too in
+// case of a direct visit.
+const RAISES_INTENT = new Set(["CUSTOMER", "PARTNER"]);
 
 // Real service_code fields required by RAISE_INTENT beyond what
 // service_catalogue itself carries (asset class, engine capacity,
@@ -24,6 +31,8 @@ async function ServiceSelector() {
     .eq("registration_status", "ACTIVE")
     .limit(1)
     .maybeSingle();
+
+  if (!RAISES_INTENT.has(actor?.user_type_domain ?? "")) redirect("/dashboard/notifications");
 
   type Row = { service_id: string; service_code: string; service_macro_domain: { domain_code: string } | null };
   const services = ((data as unknown as Row[]) ?? []).map((s) => ({

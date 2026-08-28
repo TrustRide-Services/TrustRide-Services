@@ -3,10 +3,16 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { chooseUserType, refreshVerification } from "./actions";
 
+// The four USER_HUB sub-shells (Engine 11 v2.0.0) -- Operator is deliberately
+// absent: TRUSTRIDE_OPERATOR now lives under the internal TRS_OPERATOR_HUB
+// (TrustRide's own workforce, per the Article 44 finding that operators are
+// constitutionally employees, not external contractors), so becoming an
+// Operator is no longer a public self-service choice here.
 const USER_TYPES = [
   { code: "CUSTOMER", label: "Customer", intent: "Request transport, delivery, courier, or marketplace services" },
   { code: "PARTNER", label: "Partner", intent: "Contribute a resource, finance, or business collaboration" },
-  { code: "OPERATOR", label: "Operator", intent: "Drive, ride, or execute TrustRide work" },
+  { code: "GOVERNOR", label: "Governor", intent: "Hold delegated oversight authority: registers, exceptions, governance signals" },
+  { code: "INTERMEDIARY", label: "Intermediary", intent: "Publish offers and settle lawful flows as a marketplace vendor" },
 ];
 
 // Article 20.1's Identity Verification + Authorization steps, made real:

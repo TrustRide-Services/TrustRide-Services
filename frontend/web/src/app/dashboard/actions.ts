@@ -12,7 +12,7 @@ export async function signOutAction() {
 }
 
 export async function acceptQuotationAction(quoteId: string) {
-  const result = await captureCommand("USER_HUB", "ACCEPT_QUOTATION", { quote_id: quoteId });
+  const result = await captureCommand("ACCEPT_QUOTATION", { quote_id: quoteId });
   if (result.translation_status !== "TRANSLATED") {
     return { error: result.rejection_reason ?? "Could not accept quotation" };
   }
@@ -45,7 +45,7 @@ export async function raiseIntentAction(_prevState: unknown, formData: FormData)
   }
 
   try {
-    const result = await captureCommand("USER_HUB", "RAISE_INTENT", {
+    const result = await captureCommand("RAISE_INTENT", {
       user_type_domain: userTypeDomain,
       service_code: serviceCode,
       macro_domain: macroDomain,

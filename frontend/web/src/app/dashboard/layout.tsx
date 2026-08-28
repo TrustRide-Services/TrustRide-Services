@@ -3,11 +3,19 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "./actions";
 
+// The four USER_HUB sub-shells this app actually serves (Engine 11 v2.0.0).
+// GOVERNOR_APP and INTERMEDIARY_APP have real capability-registry verbs
+// (VIEW_REGISTER/RULE_ON_EXCEPTION/EMIT_GOVERNANCE_SIGNAL and
+// PUBLISH_OFFER/RECEIVE_ORDER_SIGNAL/SETTLE_LAWFUL_FLOW) but no built screens
+// yet -- those personas see Notifications only, honestly, rather than a
+// Request Service tab that would just reject their command.
 const USER_TYPE_LABEL: Record<string, string> = {
   CUSTOMER: "Customer",
   PARTNER: "Partner",
-  OPERATOR: "Operator",
+  GOVERNOR: "Governor",
+  INTERMEDIARY: "Intermediary",
 };
+const RAISES_INTENT = new Set(["CUSTOMER", "PARTNER"]);
 
 // RENDERING STRATEGY: fully dynamic, deliberately not split with Suspense.
 // Every pixel this layout renders (nav visibility, user-type badge, display
@@ -34,7 +42,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!actor?.user_type_domain) redirect("/verify");
 
   const userTypeLabel = USER_TYPE_LABEL[actor.user_type_domain] ?? actor.user_type_domain;
-  const isOperator = actor.user_type_domain === "OPERATOR";
+  const canRaiseIntent = RAISES_INTENT.has(actor.user_type_domain);
 
   return (
     <div className="flex flex-col flex-1 bg-bg-deepest">
@@ -50,12 +58,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </header>
 
       <nav className="flex flex-wrap gap-2 px-3 pt-2.5">
-        {!isOperator && (
+        {canRaiseIntent && (
           <Link href="/dashboard/orders" className="rounded-full bg-surface px-3.5 py-2 text-sm font-semibold text-text-secondary">
             My Orders
           </Link>
         )}
-        {!isOperator && (
+        {canRaiseIntent && (
           <Link href="/dashboard/raise-intent" className="rounded-full bg-surface px-3.5 py-2 text-sm font-semibold text-text-secondary">
             Request Service
           </Link>
