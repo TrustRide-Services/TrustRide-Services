@@ -2,6 +2,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { chooseUserType, refreshVerification } from "./actions";
+import { signOutAction } from "@/app/dashboard/actions";
 
 // The four USER_HUB sub-shells (Engine 11 v2.0.0) -- Operator is deliberately
 // absent: TRUSTRIDE_OPERATOR now lives under the internal TRS_OPERATOR_HUB
@@ -69,7 +70,13 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
   const isRejected = outcome === "REJECTED";
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
+    <main className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center relative">
+      <form action={signOutAction} className="absolute top-6 right-6">
+        <button type="submit" className="text-sm text-text-muted hover:text-danger transition-colors">
+          Sign out
+        </button>
+      </form>
+
       <div className={`trs-card px-8 py-11 sm:px-11 flex flex-col items-center ${isVerified ? "max-w-3xl w-full" : "max-w-md w-full"}`}>
         <div className="relative mb-6">
           <div className="absolute inset-0 rounded-full bg-gold/15 blur-xl" />
