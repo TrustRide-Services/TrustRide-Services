@@ -15,24 +15,27 @@
    field behind every screen, and a hairline "seal" ring motif on cards --
    the visual language of an instrument with authority, not a form. */
 :root {
-  --bg-deepest: #080d18;
-  --bg: #0b1424;
-  --surface: #101d34;
-  --surface-elevated: #17294a;
-  --border: #263c62;
-  --border-strong: #3a5680;
+  /* Founder-mandated palette (TrustRide law) -- exact values, not
+     approximations: deep navy-black ground, warm amber gold, cool
+     off-white text. Every other token below is derived from these four. */
+  --bg-deepest: #04101f;
+  --bg: #061528;
+  --surface: #0d1f38;
+  --surface-elevated: #15294a;
+  --border: #1e3a5f;
+  --border-strong: #3a5f8a;
 
   --navy: #161f45;
   --navy-light: #2a3570;
-  --gold: #d4af37;
-  --gold-light: #e8ca6a;
-  --gold-dim: #a4842e;
-  --gold-pressed: #b8932a;
+  --gold: #f2b255;
+  --gold-light: #f6c67e;
+  --gold-dim: #c98f3e;
+  --gold-pressed: #e09a2e;
 
-  --text-primary: #f4f1e8;
-  --text-secondary: #a9b6ca;
-  --text-muted: #7488a3;
-  --on-gold: #1a1206;
+  --text-primary: #eaf5fc;
+  --text-secondary: #8fb4ce;
+  --text-muted: #5a7d9a;
+  --on-gold: #1a1200;
 
   --success: #3fa66c;
   --danger: #e0715f;
@@ -42,7 +45,7 @@
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
   --shadow-card: 0 1px 2px rgba(0,0,0,0.4), 0 12px 32px -12px rgba(0,0,0,0.55);
-  --shadow-gold: 0 8px 28px -10px rgba(212,175,55,0.35);
+  --shadow-gold: 0 8px 28px -10px rgba(242,178,85,0.35);
 }
 
 @theme inline {
@@ -87,7 +90,7 @@ body::before {
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(60rem 34rem at 50% -12%, rgba(212,175,55,0.10), transparent 60%),
+    radial-gradient(60rem 34rem at 50% -12%, rgba(242,178,85,0.10), transparent 60%),
     radial-gradient(50rem 40rem at 110% 110%, rgba(42,53,112,0.35), transparent 60%),
     var(--bg-deepest);
 }
@@ -112,7 +115,7 @@ h1, h2, h3, .font-display {
   position: absolute;
   top: 0; left: 20px; right: 20px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(212,175,55,0.55), transparent);
+  background: linear-gradient(90deg, transparent, rgba(242,178,85,0.55), transparent);
 }
 
 .trs-btn-primary {
@@ -130,17 +133,17 @@ h1, h2, h3, .font-display {
   color: var(--gold-light);
   transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
-.trs-btn-ghost:hover { border-color: var(--gold); background: rgba(212,175,55,0.06); transform: translateY(-1px); }
+.trs-btn-ghost:hover { border-color: var(--gold); background: rgba(242,178,85,0.06); transform: translateY(-1px); }
 
 .trs-input {
-  background: rgba(8,13,24,0.55);
+  background: rgba(4,16,31,0.55);
   border: 1px solid var(--border);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .trs-input:focus {
   outline: none;
   border-color: var(--gold-dim);
-  box-shadow: 0 0 0 3px rgba(212,175,55,0.14);
+  box-shadow: 0 0 0 3px rgba(242,178,85,0.14);
 }
 
 .trs-choice-card {
@@ -150,4 +153,22 @@ h1, h2, h3, .font-display {
   transform: translateY(-2px);
   border-color: var(--gold-dim);
   box-shadow: var(--shadow-card), var(--shadow-gold);
+}
+
+/* Founder law: the brand mark must always be visibly present, either as a
+   watermark or in a corner. This is the watermark form -- a large, very
+   low-opacity centered mark sitting behind a screen's content. Scoped
+   per-page (not body::before, which already carries the sovereign field),
+   so any screen can opt in with a single class. */
+.trs-watermark {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image: url("/trustride-logo.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 520px;
+  opacity: 0.035;
+  pointer-events: none;
 }

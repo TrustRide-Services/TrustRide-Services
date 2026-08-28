@@ -7,46 +7,82 @@ import Link from "next/link";
 // and can be served from the CDN edge -- the marketing pitch is identical
 // for every anonymous visitor. See middleware.ts for the dynamic half of
 // this route.
+//
+// Structure is Founder law (locked to the reference layout given
+// 2026-08-28): topbar with the two real entry points, hero with the brand
+// promise and both CTAs, a value strip, and an address footer -- plus the
+// brand mark visible twice: a corner mark in the topbar and a large,
+// near-invisible watermark behind the whole page.
 export default function Home() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-6 py-16 relative overflow-hidden">
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold to-transparent" />
+    <>
+      <div className="trs-watermark" aria-hidden />
 
-      <div className="trs-card flex flex-col items-center max-w-md w-full px-9 py-11">
-        <div className="relative mb-6">
-          <div className="absolute inset-0 rounded-full bg-gold/20 blur-2xl" />
-          <Image src="/trustride-logo.png" alt="TrustRide" width={132} height={132} priority className="relative" />
+      <header className="relative z-10 flex items-center justify-between gap-4 px-6 sm:px-8 py-4 border-b border-border bg-bg">
+        <div className="flex items-center gap-2.5">
+          <Image src="/trustride-logo.png" alt="TrustRide" width={34} height={34} priority />
+          <span className="font-display font-semibold text-sm tracking-wide text-text-primary">TrustRide Services</span>
+        </div>
+        <nav className="flex items-center gap-6">
+          <Link href="/login" className="text-[13px] text-text-secondary hover:text-gold-light transition-colors tracking-wide">
+            External User Access
+          </Link>
+          <Link href="/login" className="text-[13px] text-text-secondary hover:text-gold-light transition-colors tracking-wide">
+            Staff Access
+          </Link>
+        </nav>
+      </header>
+
+      <main className="relative z-[5] flex-1 flex flex-col items-center justify-center text-center px-6 py-16 max-w-2xl mx-auto">
+        <div className="relative mb-8">
+          <div className="absolute inset-0 rounded-full bg-gold/15 blur-2xl" />
+          <Image src="/trustride-logo.png" alt="TrustRide Services" width={148} height={148} priority className="relative drop-shadow-[0_0_18px_rgba(242,178,85,0.22)]" />
         </div>
 
-        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-gold-dim mb-3">
-          Constitutional Services Platform
-        </p>
-        <h1 className="font-display text-[1.75rem] leading-tight font-semibold text-text-primary text-center text-balance">
-          Welcome to TrustRide.
+        <h1 className="font-display text-[1.9rem] sm:text-[2.2rem] font-bold leading-tight tracking-tight text-text-primary text-balance mb-4">
+          More than a Ride — We Save You Time.
         </h1>
-        <p className="text-base text-gold-light text-center mt-2 mb-10">How may I help you?</p>
 
-        <div className="flex gap-3.5 w-full">
-          <Link
-            href="/login"
-            className="trs-btn-ghost flex-1 py-3.5 rounded-xl text-center font-semibold tracking-wide"
-          >
-            Log In
-          </Link>
-          <Link
-            href="/register"
-            className="trs-btn-primary flex-1 py-3.5 rounded-xl text-center font-semibold tracking-wide"
-          >
+        <p className="text-[1.02rem] leading-relaxed text-text-secondary max-w-lg mb-9">
+          TrustRide organises transport, courier, delivery, executive assistance and marketplace services into one
+          trusted platform. Built in Kisumu. Serving people and businesses across Kenya.
+        </p>
+
+        <div className="flex gap-4 flex-wrap justify-center mb-9">
+          <Link href="/register" className="trs-btn-primary min-w-[150px] px-9 py-3.5 rounded-md font-bold tracking-wide">
             Sign Up
           </Link>
+          <Link href="/login" className="trs-btn-ghost min-w-[150px] px-9 py-3.5 rounded-md font-semibold tracking-wide">
+            Login
+          </Link>
         </div>
 
-        <Link href="/login?mode=forgot" className="mt-6 text-sm text-text-secondary hover:text-text-primary transition-colors">
-          Forgot password?
-        </Link>
+        <p className="text-[13px] leading-relaxed text-text-muted max-w-md">
+          TrustRide protects every user&apos;s data. Registration authenticates identity through official
+          verification (IPRS via secure partners such as MetaMap) so that only genuine users are allowed on the
+          platform. Your safety and data privacy are constitutional priorities.
+        </p>
+      </main>
+
+      <div className="relative z-[5] flex justify-center gap-8 flex-wrap px-6 py-6 border-t border-border bg-bg text-[13px] text-text-secondary">
+        <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0" /> One trusted platform</span>
+        <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0" /> Employed operators</span>
+        <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0" /> Live tracking &amp; accountability</span>
       </div>
 
-      <p className="absolute bottom-7 text-xs italic text-text-muted tracking-wide">more than a ride — we save you time.</p>
-    </main>
+      <footer className="relative z-[5] text-center px-6 py-6 border-t border-border text-[12px] leading-relaxed text-text-muted">
+        <strong className="text-text-secondary font-semibold">Kisumu County, Republic of Kenya</strong>
+        <br />
+        TrustRide Services · Founded by Onyango Albert Chitayi
+        <br />
+        Email: <a href="mailto:trustride.ke@gmail.com" className="text-text-secondary hover:text-gold-light transition-colors">trustride.ke@gmail.com</a>
+        {" · "}
+        Tel: <a href="tel:+254756984386" className="text-text-secondary hover:text-gold-light transition-colors">0756 984 386</a>
+        {" / "}
+        <a href="tel:+254714698020" className="text-text-secondary hover:text-gold-light transition-colors">0714 698 020</a>
+        <br />
+        © 2026 · Platform Code TRS026
+      </footer>
+    </>
   );
 }
