@@ -58,50 +58,61 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
   const isRejected = outcome === "REJECTED";
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center bg-bg-deepest px-7 py-16 text-center">
-      <Image src="/trustride-logo.png" alt="TrustRide" width={96} height={96} className="mb-6" />
-      {bindError && <p className="text-danger text-sm mb-4 max-w-md">{bindError}</p>}
+    <main className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
+      <div className={`trs-card px-8 py-11 sm:px-11 flex flex-col items-center ${isVerified ? "max-w-2xl w-full" : "max-w-md w-full"}`}>
+        <div className="relative mb-6">
+          <div className="absolute inset-0 rounded-full bg-gold/15 blur-xl" />
+          <Image src="/trustride-logo.png" alt="TrustRide" width={80} height={80} className="relative" />
+        </div>
+        {bindError && <p className="text-danger text-sm mb-4 max-w-md">{bindError}</p>}
 
-      {isRejected ? (
-        <>
-          <h1 className="text-xl font-bold text-text-primary mb-3">We couldn&apos;t verify this identity</h1>
-          <p className="text-sm text-text-secondary max-w-md leading-relaxed">
-            The details you submitted didn&apos;t clear our identity check. This can happen with a typo in your ID
-            number or name. Please contact TrustRide support to resolve this.
-          </p>
-        </>
-      ) : isVerified ? (
-        <>
-          <h1 className="text-xl font-bold text-text-primary mb-3">Identity verified</h1>
-          <p className="text-sm text-text-secondary mb-4">How will you engage with TrustRide?</p>
-          <div className="flex flex-wrap gap-2.5 justify-center max-w-lg">
-            {USER_TYPES.map((t) => (
-              <form key={t.code} action={chooseUserType.bind(null, t.code)}>
-                <button
-                  type="submit"
-                  className="w-[150px] rounded-xl border border-border bg-surface p-4 text-left hover:border-gold"
-                >
-                  <span className="block text-gold-light font-bold text-sm mb-1.5">{t.label}</span>
-                  <span className="block text-text-muted text-xs leading-snug">{t.intent}</span>
-                </button>
-              </form>
-            ))}
-          </div>
-        </>
-      ) : (
-        <>
-          <h1 className="text-xl font-bold text-text-primary mb-3">Verifying your identity</h1>
-          <p className="text-sm text-text-secondary max-w-md leading-relaxed mb-6">
-            TrustRide checks every new identity before opening full access to the platform -- this protects you and
-            everyone else who relies on TrustRide. This usually resolves within moments.
-          </p>
-          <form action={refreshVerification}>
-            <button type="submit" className="rounded-lg bg-gold text-on-gold font-bold px-7 py-3.5">
-              Check again
-            </button>
-          </form>
-        </>
-      )}
+        {isRejected ? (
+          <>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-danger mb-3">Verification Failed</p>
+            <h1 className="font-display text-xl font-semibold text-text-primary mb-3 text-balance">We couldn&apos;t verify this identity</h1>
+            <p className="text-sm text-text-secondary max-w-md leading-relaxed">
+              The details you submitted didn&apos;t clear our identity check. This can happen with a typo in your ID
+              number or name. Please contact TrustRide support to resolve this.
+            </p>
+          </>
+        ) : isVerified ? (
+          <>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-gold-dim mb-3">Identity Verified</p>
+            <h1 className="font-display text-xl font-semibold text-text-primary mb-2 text-balance">How will you engage with TrustRide?</h1>
+            <p className="text-sm text-text-secondary mb-8">Choose the sovereign shell that matches your role on the platform.</p>
+            <div className="grid grid-cols-2 gap-3.5 w-full">
+              {USER_TYPES.map((t) => (
+                <form key={t.code} action={chooseUserType.bind(null, t.code)} className="contents">
+                  <button
+                    type="submit"
+                    className="trs-choice-card trs-card text-left p-4 flex flex-col items-start"
+                  >
+                    <span className="w-9 h-9 rounded-full bg-gradient-to-br from-gold-light to-gold-dim text-on-gold font-display font-semibold text-sm flex items-center justify-center mb-3">
+                      {t.label[0]}
+                    </span>
+                    <span className="block text-text-primary font-semibold text-sm mb-1">{t.label}</span>
+                    <span className="block text-text-muted text-xs leading-snug">{t.intent}</span>
+                  </button>
+                </form>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-gold-dim mb-3">Verifying</p>
+            <h1 className="font-display text-xl font-semibold text-text-primary mb-3 text-balance">Verifying your identity</h1>
+            <p className="text-sm text-text-secondary max-w-md leading-relaxed mb-7">
+              TrustRide checks every new identity before opening full access to the platform -- this protects you and
+              everyone else who relies on TrustRide. This usually resolves within moments.
+            </p>
+            <form action={refreshVerification}>
+              <button type="submit" className="trs-btn-primary rounded-xl px-7 py-3.5 font-semibold">
+                Check again
+              </button>
+            </form>
+          </>
+        )}
+      </div>
     </main>
   );
 }

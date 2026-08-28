@@ -18,12 +18,20 @@ async function AcceptQuotationButton({ quoteId }: { quoteId: string }) {
   }
   return (
     <form action={action}>
-      <button type="submit" className="rounded-lg bg-gold text-on-gold font-bold text-sm px-4 py-2 mt-2">
+      <button type="submit" className="trs-btn-primary rounded-lg text-sm font-semibold px-4 py-2 mt-3">
         Accept quotation
       </button>
     </form>
   );
 }
+
+const STATUS_TONE: Record<string, string> = {
+  DELIVERED: "bg-success/15 text-success border-success/30",
+  SETTLED: "bg-success/15 text-success border-success/30",
+  CANCELLED: "bg-danger-bg text-danger border-danger/30",
+  REJECTED: "bg-danger-bg text-danger border-danger/30",
+};
+const DEFAULT_TONE = "bg-gold/10 text-gold-light border-gold-dim/40";
 
 async function OrdersList() {
   const supabase = await createClient();
@@ -40,14 +48,16 @@ async function OrdersList() {
       {orders.length === 0 && !error && (
         <p className="text-text-muted text-center mt-10">No orders yet -- place one from the Request Service tab.</p>
       )}
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-3">
         {orders.map((o) => (
-          <div key={o.order_id} className="rounded-xl border border-border bg-surface p-3.5">
-            <div className="flex justify-between">
-              <span className="font-bold text-text-primary">{o.order_code}</span>
-              <span className="font-semibold text-gold-light">{o.status}</span>
+          <div key={o.order_id} className="trs-card p-4">
+            <div className="flex justify-between items-start gap-3">
+              <span className="font-display font-semibold text-text-primary">{o.order_code}</span>
+              <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${STATUS_TONE[o.status] ?? DEFAULT_TONE}`}>
+                {o.status}
+              </span>
             </div>
-            <p className="text-text-secondary text-xs mt-1">{o.service_code}</p>
+            <p className="text-text-secondary text-xs mt-1.5">{o.service_code}</p>
             {o.quote_id && <AcceptQuotationButton quoteId={o.quote_id} />}
           </div>
         ))}
@@ -64,7 +74,7 @@ async function OrdersList() {
 export default function OrdersPage() {
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-lg font-bold text-text-primary mb-4">Your orders</h1>
+      <h1 className="font-display text-xl font-semibold text-text-primary mb-5">Your orders</h1>
       <Suspense fallback={<p className="text-text-muted text-center mt-10">Loading your orders…</p>}>
         <OrdersList />
       </Suspense>

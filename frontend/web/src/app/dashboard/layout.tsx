@@ -44,36 +44,43 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const userTypeLabel = USER_TYPE_LABEL[actor.user_type_domain] ?? actor.user_type_domain;
   const canRaiseIntent = RAISES_INTENT.has(actor.user_type_domain);
 
+  const initial = (profile.display_name ?? "?").trim()[0]?.toUpperCase() ?? "?";
+
   return (
-    <div className="flex flex-col flex-1 bg-bg-deepest">
-      <header className="flex items-center gap-3 px-4 py-4 border-b border-border">
-        <span className="text-lg font-bold text-text-primary flex-1">TrustRide</span>
-        <span className="rounded-full bg-surface-elevated px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-gold-light">
+    <div className="flex flex-col flex-1">
+      <header className="sticky top-0 z-10 flex items-center gap-3 px-5 py-3.5 border-b border-border bg-bg-deepest/85 backdrop-blur">
+        <span className="font-display text-lg font-semibold text-text-primary flex-1">TrustRide</span>
+        <span className="rounded-full border border-gold-dim/60 bg-gold/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-light">
           {userTypeLabel}
         </span>
-        <span className="text-text-secondary">{profile.display_name}</span>
+        <div className="flex items-center gap-2.5 pl-1">
+          <span className="w-8 h-8 rounded-full bg-gradient-to-br from-gold-light to-gold-dim text-on-gold font-display font-semibold text-sm flex items-center justify-center">
+            {initial}
+          </span>
+          <span className="text-text-secondary text-sm hidden sm:inline">{profile.display_name}</span>
+        </div>
         <form action={signOutAction}>
-          <button type="submit" className="text-danger">Sign out</button>
+          <button type="submit" className="text-danger text-sm font-medium hover:text-danger/80 transition-colors ml-1">Sign out</button>
         </form>
       </header>
 
-      <nav className="flex flex-wrap gap-2 px-3 pt-2.5">
+      <nav className="flex flex-wrap gap-2 px-5 pt-4">
         {canRaiseIntent && (
-          <Link href="/dashboard/orders" className="rounded-full bg-surface px-3.5 py-2 text-sm font-semibold text-text-secondary">
+          <Link href="/dashboard/orders" className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:border-gold-dim transition-colors">
             My Orders
           </Link>
         )}
         {canRaiseIntent && (
-          <Link href="/dashboard/raise-intent" className="rounded-full bg-surface px-3.5 py-2 text-sm font-semibold text-text-secondary">
+          <Link href="/dashboard/raise-intent" className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:border-gold-dim transition-colors">
             Request Service
           </Link>
         )}
-        <Link href="/dashboard/notifications" className="rounded-full bg-surface px-3.5 py-2 text-sm font-semibold text-text-secondary">
+        <Link href="/dashboard/notifications" className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:border-gold-dim transition-colors">
           Notifications
         </Link>
       </nav>
 
-      <div className="flex-1 mt-2 p-4">{children}</div>
+      <div className="flex-1 mt-3 p-5">{children}</div>
     </div>
   );
 }

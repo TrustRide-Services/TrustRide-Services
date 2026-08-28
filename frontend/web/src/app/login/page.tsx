@@ -55,13 +55,16 @@ function LoginForm() {
   const buttonLabel = mode === "SIGN_IN" ? "Log In" : "Send reset link";
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center bg-bg-deepest px-6 py-16">
-      <Link href="/" className="absolute top-5 left-5 text-sm text-text-secondary">
+    <main className="flex flex-1 flex-col items-center justify-center px-6 py-16 relative">
+      <Link href="/" className="absolute top-6 left-6 text-sm text-text-secondary hover:text-text-primary transition-colors">
         ← Back
       </Link>
-      <form onSubmit={submit} className="w-full max-w-md rounded-2xl border border-border bg-surface p-7">
-        <Image src="/trustride-logo.png" alt="TrustRide" width={72} height={72} className="mx-auto mb-3.5" />
-        <h1 className="text-xl font-bold text-text-primary text-center mb-5">{heading}</h1>
+      <form onSubmit={submit} className="trs-card w-full max-w-md px-8 py-10">
+        <div className="relative mx-auto mb-5 w-fit">
+          <div className="absolute inset-0 rounded-full bg-gold/15 blur-xl" />
+          <Image src="/trustride-logo.png" alt="TrustRide" width={68} height={68} className="relative" />
+        </div>
+        <h1 className="font-display text-xl font-semibold text-text-primary text-center mb-6 text-balance">{heading}</h1>
 
         {notice && <p className="text-success text-center text-sm mb-4">{notice}</p>}
         {error && <p className="text-danger text-center text-sm mb-4">{error}</p>}
@@ -72,7 +75,7 @@ function LoginForm() {
           autoCapitalize="off"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full bg-bg text-text-primary rounded-lg px-3.5 py-3 mb-3 border border-border placeholder:text-text-muted"
+          className="trs-input w-full text-text-primary rounded-xl px-4 py-3 mb-3 placeholder:text-text-muted"
         />
         {mode !== "FORGOT_PASSWORD" && (
           <input
@@ -80,30 +83,30 @@ function LoginForm() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-bg text-text-primary rounded-lg px-3.5 py-3 mb-3 border border-border placeholder:text-text-muted"
+            className="trs-input w-full text-text-primary rounded-xl px-4 py-3 mb-3 placeholder:text-text-muted"
           />
         )}
 
         <button
           type="submit"
           disabled={busy}
-          className="w-full bg-gold text-on-gold font-bold rounded-lg py-3.5 mt-2 mb-4.5 disabled:opacity-60"
+          className="trs-btn-primary w-full font-semibold rounded-xl py-3.5 mt-2 mb-5 disabled:opacity-60"
         >
           {busy ? "…" : buttonLabel}
         </button>
 
         {mode === "SIGN_IN" && (
           <div className="flex flex-col items-center gap-2">
-            <Link href="/register" className="text-gold-light font-semibold text-sm">
+            <Link href="/register" className="text-gold-light font-semibold text-sm hover:text-gold transition-colors">
               Need an account? Sign up
             </Link>
-            <button type="button" onClick={() => setMode("FORGOT_PASSWORD")} className="text-text-muted text-sm">
+            <button type="button" onClick={() => setMode("FORGOT_PASSWORD")} className="text-text-muted text-sm hover:text-text-secondary transition-colors">
               Forgot password?
             </button>
           </div>
         )}
         {mode === "FORGOT_PASSWORD" && (
-          <button type="button" onClick={() => setMode("SIGN_IN")} className="w-full text-gold-light font-semibold text-sm">
+          <button type="button" onClick={() => setMode("SIGN_IN")} className="w-full text-gold-light font-semibold text-sm hover:text-gold transition-colors">
             Back to log in
           </button>
         )}

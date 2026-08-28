@@ -58,7 +58,7 @@ async function ServiceSelector() {
 export default function RaiseIntentPage() {
   return (
     <div className="max-w-xl">
-      <h1 className="text-lg font-bold text-text-primary mb-4">Request a service</h1>
+      <h1 className="font-display text-xl font-semibold text-text-primary mb-5">Request a service</h1>
       <Suspense fallback={<p className="text-text-muted text-center mt-10">Loading services…</p>}>
         <ServiceSelector />
       </Suspense>

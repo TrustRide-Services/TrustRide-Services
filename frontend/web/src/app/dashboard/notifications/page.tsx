@@ -22,18 +22,18 @@ async function NotificationsList() {
     <>
       {error && <p className="rounded-lg bg-danger-bg text-danger text-sm p-2.5 mb-3">{error.message}</p>}
       {items.length === 0 && !error && <p className="text-text-muted text-center mt-10">No notifications yet.</p>}
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-3">
         {items.map((n) => (
           <div
             key={n.notification_id}
-            className={`rounded-xl border p-3.5 ${n.read_status === "UNREAD" ? "border-gold bg-surface" : "border-border bg-surface"}`}
+            className={`trs-card p-4 ${n.read_status === "UNREAD" ? "border-gold-dim/50" : ""}`}
           >
-            <div className="flex justify-between items-center">
-              <span className="font-bold text-text-primary">{n.title}</span>
-              {n.read_status === "UNREAD" && <span className="w-2 h-2 rounded-full bg-gold" />}
+            <div className="flex justify-between items-center gap-3">
+              <span className="font-display font-semibold text-text-primary">{n.title}</span>
+              {n.read_status === "UNREAD" && <span className="shrink-0 w-2 h-2 rounded-full bg-gold shadow-[0_0_8px_var(--gold)]" />}
             </div>
-            <p className="text-text-secondary text-sm mt-1">{n.body}</p>
-            <p className="text-text-muted text-xs mt-1.5">{new Date(n.delivered_at).toLocaleString()}</p>
+            <p className="text-text-secondary text-sm mt-1.5">{n.body}</p>
+            <p className="text-text-muted text-xs mt-2">{new Date(n.delivered_at).toLocaleString()}</p>
           </div>
         ))}
       </div>
@@ -49,7 +49,7 @@ async function NotificationsList() {
 export default function NotificationsPage() {
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-lg font-bold text-text-primary mb-4">Notifications</h1>
+      <h1 className="font-display text-xl font-semibold text-text-primary mb-5">Notifications</h1>
       <Suspense fallback={<p className="text-text-muted text-center mt-10">Loading notifications…</p>}>
         <NotificationsList />
       </Suspense>

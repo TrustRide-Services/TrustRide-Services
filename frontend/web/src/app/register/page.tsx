@@ -13,8 +13,11 @@ export default async function RegisterPage() {
 
   if (!userData.user) {
     return (
-      <main className="flex flex-1 flex-col items-center justify-center bg-bg-deepest px-6 py-16">
-        <Image src="/trustride-logo.png" alt="TrustRide" width={64} height={64} className="mb-4" />
+      <main className="flex flex-1 flex-col items-center justify-center px-6 py-16">
+        <div className="relative mb-6">
+          <div className="absolute inset-0 rounded-full bg-gold/15 blur-xl" />
+          <Image src="/trustride-logo.png" alt="TrustRide" width={64} height={64} className="relative" />
+        </div>
         <SignUpForm />
       </main>
     );
@@ -24,8 +27,11 @@ export default async function RegisterPage() {
   if (profile) redirect("/verify");
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center bg-bg-deepest px-6 py-16">
-      <Image src="/trustride-logo.png" alt="TrustRide" width={64} height={64} className="mb-4" />
+    <main className="flex flex-1 flex-col items-center justify-center px-6 py-16">
+      <div className="relative mb-6">
+        <div className="absolute inset-0 rounded-full bg-gold/15 blur-xl" />
+        <Image src="/trustride-logo.png" alt="TrustRide" width={64} height={64} className="relative" />
+      </div>
       <RegisterForm email={userData.user.email} />
     </main>
   );

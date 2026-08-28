@@ -9,29 +9,39 @@ import Link from "next/link";
 // this route.
 export default function Home() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center bg-bg-deepest px-6 py-16 relative">
-      <div className="absolute top-0 left-0 right-0 h-[3px] bg-gold" />
-      <div className="flex flex-col items-center max-w-md w-full">
-        <Image src="/trustride-logo.png" alt="TrustRide" width={168} height={168} priority className="mb-7" />
-        <h1 className="text-2xl font-bold text-text-primary text-center tracking-tight">Welcome to TrustRide Services.</h1>
-        <p className="text-base font-semibold text-gold-light text-center mt-1.5 mb-9">How may I help you?</p>
+    <main className="flex flex-1 flex-col items-center justify-center px-6 py-16 relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold to-transparent" />
+
+      <div className="trs-card flex flex-col items-center max-w-md w-full px-9 py-11">
+        <div className="relative mb-6">
+          <div className="absolute inset-0 rounded-full bg-gold/20 blur-2xl" />
+          <Image src="/trustride-logo.png" alt="TrustRide" width={132} height={132} priority className="relative" />
+        </div>
+
+        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-gold-dim mb-3">
+          Constitutional Services Platform
+        </p>
+        <h1 className="font-display text-[1.75rem] leading-tight font-semibold text-text-primary text-center text-balance">
+          Welcome to TrustRide.
+        </h1>
+        <p className="text-base text-gold-light text-center mt-2 mb-10">How may I help you?</p>
 
         <div className="flex gap-3.5 w-full">
           <Link
             href="/login"
-            className="flex-1 py-4 rounded-xl text-center font-bold text-gold border-[1.5px] border-gold tracking-wide"
+            className="trs-btn-ghost flex-1 py-3.5 rounded-xl text-center font-semibold tracking-wide"
           >
             Log In
           </Link>
           <Link
             href="/register"
-            className="flex-1 py-4 rounded-xl text-center font-bold text-on-gold bg-gold tracking-wide"
+            className="trs-btn-primary flex-1 py-3.5 rounded-xl text-center font-semibold tracking-wide"
           >
             Sign Up
           </Link>
         </div>
 
-        <Link href="/login?mode=forgot" className="mt-5 text-sm text-text-secondary">
+        <Link href="/login?mode=forgot" className="mt-6 text-sm text-text-secondary hover:text-text-primary transition-colors">
           Forgot password?
         </Link>
       </div>
