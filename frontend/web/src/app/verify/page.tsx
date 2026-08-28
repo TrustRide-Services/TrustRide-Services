@@ -15,6 +15,17 @@ const USER_TYPES = [
   { code: "INTERMEDIARY", label: "Intermediary", intent: "Publish offers and settle lawful flows as a marketplace vendor" },
 ];
 
+// TRS_OPERATOR_HUB's three sub-shells -- shown so the platform's real
+// two-shell structure is visible here, but never self-service. TrustRide's
+// own workforce is authorized internally, not through public sign-up (the
+// Article 44 finding that operators are constitutionally employees, not
+// external contractors, applies to all three).
+const INTERNAL_SHELLS = [
+  { code: "TRUSTRIDE_OPERATOR", label: "Operator", note: "Drive, ride, or execute TrustRide work" },
+  { code: "TRUSTRIDE_ADMIN", label: "Admin", note: "Platform administration & governance signals" },
+  { code: "TRUSTRIDE_EXECUTIVE_CONSOLE", label: "Executive Console", note: "Whole-estate oversight & scenario modelling" },
+];
+
 // Article 20.1's Identity Verification + Authorization steps, made real:
 // Engine 6's simulated identity adapter processes the real
 // VERIFICATION_REQUESTED signal automatically (pg_cron dispatch, ~10s), so
@@ -59,7 +70,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
-      <div className={`trs-card px-8 py-11 sm:px-11 flex flex-col items-center ${isVerified ? "max-w-2xl w-full" : "max-w-md w-full"}`}>
+      <div className={`trs-card px-8 py-11 sm:px-11 flex flex-col items-center ${isVerified ? "max-w-3xl w-full" : "max-w-md w-full"}`}>
         <div className="relative mb-6">
           <div className="absolute inset-0 rounded-full bg-gold/15 blur-xl" />
           <Image src="/trustride-logo.png" alt="TrustRide" width={80} height={80} className="relative" />
@@ -77,24 +88,51 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
           </>
         ) : isVerified ? (
           <>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-gold-dim mb-3">Identity Verified</p>
-            <h1 className="font-display text-xl font-semibold text-text-primary mb-2 text-balance">How will you engage with TrustRide?</h1>
-            <p className="text-sm text-text-secondary mb-8">Choose the sovereign shell that matches your role on the platform.</p>
-            <div className="grid grid-cols-2 gap-3.5 w-full">
-              {USER_TYPES.map((t) => (
-                <form key={t.code} action={chooseUserType.bind(null, t.code)} className="contents">
-                  <button
-                    type="submit"
-                    className="trs-choice-card trs-card text-left p-4 flex flex-col items-start"
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-gold-dim mb-3">Access · Registration · Authentication · Authorization</p>
+            <h1 className="font-display text-2xl font-semibold text-text-primary mb-1.5 text-balance">Welcome to TrustRide.</h1>
+            <p className="text-sm text-gold-light italic mb-8">More than a ride — we save you time.</p>
+
+            <div className="w-full text-left">
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold-dim">User Hub</span>
+                <span className="text-[11px] text-text-muted">— external, self-service. Choose your shell.</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3.5 w-full mb-9">
+                {USER_TYPES.map((t) => (
+                  <form key={t.code} action={chooseUserType.bind(null, t.code)} className="contents">
+                    <button
+                      type="submit"
+                      className="trs-choice-card trs-card text-left p-4 flex flex-col items-start"
+                    >
+                      <span className="w-9 h-9 rounded-full bg-gradient-to-br from-gold-light to-gold-dim text-on-gold font-display font-semibold text-sm flex items-center justify-center mb-3">
+                        {t.label[0]}
+                      </span>
+                      <span className="block text-text-primary font-semibold text-sm mb-1">{t.label}</span>
+                      <span className="block text-text-muted text-xs leading-snug">{t.intent}</span>
+                    </button>
+                  </form>
+                ))}
+              </div>
+
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-muted">TrustRide Operator Hub</span>
+                <span className="text-[11px] text-text-muted">— internal, granted by TrustRide, not self-service.</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {INTERNAL_SHELLS.map((s) => (
+                  <div
+                    key={s.code}
+                    className="trs-card p-4 flex flex-col items-start opacity-55 cursor-not-allowed select-none"
+                    title="Internal access only -- granted by TrustRide, not chosen here"
                   >
-                    <span className="w-9 h-9 rounded-full bg-gradient-to-br from-gold-light to-gold-dim text-on-gold font-display font-semibold text-sm flex items-center justify-center mb-3">
-                      {t.label[0]}
+                    <span className="w-9 h-9 rounded-full border border-border-strong text-text-muted font-display font-semibold text-sm flex items-center justify-center mb-3">
+                      {s.label[0]}
                     </span>
-                    <span className="block text-text-primary font-semibold text-sm mb-1">{t.label}</span>
-                    <span className="block text-text-muted text-xs leading-snug">{t.intent}</span>
-                  </button>
-                </form>
-              ))}
+                    <span className="block text-text-secondary font-semibold text-sm mb-1">{s.label}</span>
+                    <span className="block text-text-muted text-xs leading-snug">{s.note}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </>
         ) : (
