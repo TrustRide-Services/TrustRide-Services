@@ -37,6 +37,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .from("business_actor_registration")
     .select("user_type_domain")
     .eq("registration_status", "ACTIVE")
+    .order("registered_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (!actor?.user_type_domain) redirect("/verify");

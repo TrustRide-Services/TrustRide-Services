@@ -29,6 +29,7 @@ async function ServiceSelector() {
     .from("business_actor_registration")
     .select("user_type_domain")
     .eq("registration_status", "ACTIVE")
+    .order("registered_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
