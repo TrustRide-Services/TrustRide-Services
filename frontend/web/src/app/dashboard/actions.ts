@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -8,11 +9,12 @@ import { captureCommand } from "@/lib/trustride";
 export async function signOutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  (await cookies()).delete("trs_access_id");
   redirect("/");
 }
 
 export async function acceptQuotationAction(quoteId: string) {
-  const result = await captureCommand("ACCEPT_QUOTATION", { quote_id: quoteId });
+  const result = await captureCommand("TRUSTRIDE_BUSINESS", "CUSTOMER_APP", "ACCEPT_QUOTATION", { quote_id: quoteId });
   if (result.translation_status !== "TRANSLATED") {
     return { error: result.rejection_reason ?? "Could not accept quotation" };
   }
@@ -45,7 +47,7 @@ export async function raiseIntentAction(_prevState: unknown, formData: FormData)
   }
 
   try {
-    const result = await captureCommand("RAISE_INTENT", {
+    const result = await captureCommand("TRUSTRIDE_BUSINESS", "CUSTOMER_APP", "RAISE_INTENT", {
       user_type_domain: userTypeDomain,
       service_code: serviceCode,
       macro_domain: macroDomain,

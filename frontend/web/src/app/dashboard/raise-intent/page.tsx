@@ -3,11 +3,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import RaiseIntentForm from "./RaiseIntentForm";
 
-// Only CUSTOMER_APP and PARTNER_APP carry the RAISE_INTENT verb in
-// present_shell_capability_registry -- Governor and Intermediary don't, so
-// this route isn't offered to them in the nav, and is guarded here too in
-// case of a direct visit.
-const RAISES_INTENT = new Set(["CUSTOMER", "PARTNER"]);
+// Customer_App's Service Catalogue (TRS026-ENG011-PRESENT-003 Sec.4.1): opens
+// immediately for an active Customer. Only CUSTOMER_APP carries RAISE_INTENT;
+// Partners, Governors and Intermediaries do not consume the catalogue.
 
 // Real service_code fields required by RAISE_INTENT beyond what
 // service_catalogue itself carries (asset class, engine capacity,
@@ -25,15 +23,14 @@ async function ServiceSelector() {
     .select("service_id, service_code, status, service_macro_domain(domain_code)")
     .eq("status", "ACTIVE");
 
-  const { data: actor } = await supabase
+  const { data: customer } = await supabase
     .from("business_actor_registration")
     .select("user_type_domain")
+    .eq("user_type_domain", "CUSTOMER")
     .eq("registration_status", "ACTIVE")
-    .order("registered_at", { ascending: false })
-    .limit(1)
     .maybeSingle();
 
-  if (!RAISES_INTENT.has(actor?.user_type_domain ?? "")) redirect("/dashboard/notifications");
+  if (!customer) redirect("/dashboard");
 
   type Row = { service_id: string; service_code: string; service_macro_domain: { domain_code: string } | null };
   const services = ((data as unknown as Row[]) ?? []).map((s) => ({
@@ -48,7 +45,7 @@ async function ServiceSelector() {
     return <p className="text-text-muted text-center mt-10">No active services are published yet. Check back soon.</p>;
   }
 
-  return <RaiseIntentForm services={services} userTypeDomain={actor?.user_type_domain ?? "CUSTOMER"} />;
+  return <RaiseIntentForm services={services} userTypeDomain="CUSTOMER" />;
 }
 
 // RENDERING STRATEGY: hybrid. The heading is a static shell; the service

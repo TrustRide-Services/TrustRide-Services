@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { beginLoginAccess, completeLoginAccess } from "./actions";
 
 // RENDERING STRATEGY: fully static. Pure client component -- no server
 // data, no cookies, identical HTML shipped to every visitor; Supabase auth
-// calls happen entirely in the browser after hydration. Sign-up is
+// calls happen in the browser after hydration, bracketed by two server
+// actions that record and bind the visit's System Access. Sign-up is
 // deliberately NOT handled here -- it lives at /register, the one real
 // combined shell (name, ID, email, password) that also captures identity
 // details for verification. This page only ever authenticates an existing
@@ -44,10 +46,15 @@ function LoginForm() {
 
     if (!email || !password) return setError("Enter both email and password.");
     setBusy(true);
+    const accessId = await beginLoginAccess();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setBusy(false);
+      return setError(error.message);
+    }
+    await completeLoginAccess(accessId);
     setBusy(false);
-    if (error) return setError(error.message);
-    router.push("/dashboard");
+    router.push("/verify");
     router.refresh();
   };
 

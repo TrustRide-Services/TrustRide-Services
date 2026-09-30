@@ -38,6 +38,7 @@ async function OrdersList() {
   const { data, error } = await supabase
     .from("business_order")
     .select("order_id, order_code, service_code, status, quote_id, placed_at")
+    .eq("order_root_type", "SERVICE_ORDER")
     .order("placed_at", { ascending: false });
 
   const orders = (data as MyOrder[]) ?? [];

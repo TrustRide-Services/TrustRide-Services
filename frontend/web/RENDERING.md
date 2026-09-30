@@ -1,41 +1,35 @@
-# Rendering strategy
+# Frontend structure and rendering strategy
 
-Hybrid by default: static unless a route genuinely needs request-time data,
-auth, or personalization. No blanket `force-dynamic`/`force-static` anywhere
-in this app. The per-route reasoning lives as a comment at the top of each
-file; this note is the one-page summary the Founder's directive asked for.
+Implements **TRS026-FE-01 Frontend Architecture FINAL** and **TRS026-ENG011-PRESENT-003 FINAL** (Engine 11 v3.0.0).
 
-Heuristic used everywhere below: *Is this content the same for all visitors
-and stable? → static. Does it depend on the current user, auth, or
-request-specific data? → dynamic, and keep a static shell around it where
-one exists.*
+## The Sovereign Gate
 
-## User Hub (built)
+Every visitor passes the same sequence — no step skipped or reordered:
+
+System Access → Registration → Authentication (Engine 6) → Authorization (Engine 1) → Profile → routed into one of the three main shells.
+
+- **System Access** is the first record of every visit: at sign-up (`register/actions.ts`, before the account exists), at login (`login/actions.ts`), and once per browser session for a resumed visit (`lib/supabase/middleware.ts`). The id rides in the `trs_access_id` cookie and links every shell session opened during the visit.
+- **`/verify`** is the Gate: it waits on Engine 6's result, then lays out the three shells with a real way in for every actor.
+
+## The three main shells
+
+| Shell | Route | Sub-shells | Who |
+|---|---|---|---|
+| TrustRide Business (external) | `/dashboard` | Customer_App, Partner_App, Governor_App, Intermediary_App | Customer: catalogue and orders immediately. Partner / Governor / Intermediary: submit a request, decided within 2–3 working days |
+| TrustRide Marketplace (external) | `/marketplace` | Marketplace_App, Vendor_App | Buyers reserve motorcycles and cars; vendors apply to list (5% commission per sale) |
+| TrustRide Office (internal) | `/office` | Admin_Console, Operator_App, Executive_Dashboard | TrustRide staff only — Admin decides every actor request |
+
+The database, not this app, enforces who may open which shell (`fn_present_shell_session_open`). No actor lands on a surface with nothing lawful to do: pending Partners, Governors and Intermediaries can enter to submit and follow their request; staff request Office access at the Gate; the first verified identity may claim Founder authority once.
+
+## Rendering strategy
+
+Hybrid by default — static unless a route needs request-time identity.
 
 | Route | Strategy | Why |
 |---|---|---|
-| `/` | Static | Marketing pitch, identical for every anonymous visitor. The signed-in-user redirect lives in `middleware.ts`, not in the page, so the component itself has no cookie dependency. |
-| `/login` | Static (client component) | No server data at all; Supabase auth runs in the browser post-hydration. |
-| `/register` | Fully dynamic | Single-user gate + form; nothing on it is shared across visitors. |
-| `/verify` | Fully dynamic | Which of three states renders depends entirely on this user's own verification/actor rows. |
-| `/dashboard` (layout) | Fully dynamic, not Suspense-split | Nav and header content depend on the same auth/profile/actor gate that also decides whether to redirect away — no data-independent shell exists above that gate. |
-| `/dashboard/orders` | Hybrid | Static heading shell; RLS-scoped order list streams in via Suspense. |
-| `/dashboard/notifications` | Hybrid | Static heading shell; per-user notification list streams in via Suspense. |
-| `/dashboard/raise-intent` | Hybrid | Static heading shell; service catalogue + actor lookup stream in via Suspense before the client form mounts. |
-
-## Not yet built
-
-Marketplace, Operator App, Executive Dashboard, Admin Console don't exist in
-this app yet. When built:
-
-- **Marketplace** (public-facing, like User Hub): default static/ISR for
-  listing/browse pages, hybrid for anything user-specific (cart, orders),
-  same pattern as `/dashboard/*` above.
-- **Operator App / Executive Dashboard / Admin Console** (internal
-  workforce only): default dynamic/hybrid — almost every view is
-  personalized or permission-gated. Still extract static UI chrome
-  (layout frames, icons, labels) into non-async components and stream
-  genuinely live operational data (dispatch queues, live positions) via
-  client-side polling/subscriptions after the initial shell loads, rather
-  than re-fetching the full page. Prioritize correctness and freshness
-  over static performance — these are internal tools, not public pages.
+| `/` | Static | Identical for every anonymous visitor; the signed-in redirect lives in middleware |
+| `/login` | Static (client) | No server data; auth runs in the browser, bracketed by System Access server actions |
+| `/register`, `/verify` | Dynamic | Entirely decided by this visitor's own identity, verification and roles |
+| `/dashboard`, `/marketplace`, `/office` layouts | Dynamic | Every link depends on the same gate that decides whether to redirect |
+| `/dashboard/orders`, `/notifications`, `/raise-intent`, `/requests`, `/marketplace`, `/marketplace/vendor` | Hybrid | Static heading and form; per-user lists streamed via Suspense |
+| `/office` | Dynamic | Internal, permission-gated live queue — correctness and freshness over static performance |

@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { bindSystemAccess, recordSystemAccess } from "@/lib/trustride";
 
 // The one shell a brand-new visitor sees: account credentials and identity
 // details captured together, submitted once. auth.signUp() and
@@ -25,6 +26,10 @@ export async function signUpAndRegister(_prevState: unknown, formData: FormData)
   if (!email || !password) return { error: "Enter an email and password." };
   if (!consent) return { error: "TrustRide needs your consent under the Data Protection Act to proceed." };
 
+  // Sovereign Gate step 1: System Access is recorded before anything else --
+  // before the account even exists (TRS026-ENG011-PRESENT-003 Sec.3.1).
+  const accessId = await recordSystemAccess("REGISTER");
+
   const supabase = await createClient();
   const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
   if (signUpError) return { error: signUpError.message };
@@ -43,6 +48,7 @@ export async function signUpAndRegister(_prevState: unknown, formData: FormData)
   });
   if (regError) return { error: regError.message };
 
+  await bindSystemAccess(accessId, "REGISTRATION");
   redirect("/verify");
 }
 
