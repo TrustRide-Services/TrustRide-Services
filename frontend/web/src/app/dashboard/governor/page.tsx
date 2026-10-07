@@ -32,7 +32,7 @@ export default async function GovernorPage() {
           {scopeField("scope.oversight_scope", "What you need to see", "e.g. trip volumes and revenue for levy assessment")}
         </>} />
       {data?.message && <Notice>{data.message}</Notice>}
-      {data?.engagement && (
+      {data?.engagement && Object.keys(data.scopes ?? {}).length > 0 && (
         <Section title="Granted data">
           {Object.entries(data.scopes).map(([scope, v]) => (
             <Card key={scope}>

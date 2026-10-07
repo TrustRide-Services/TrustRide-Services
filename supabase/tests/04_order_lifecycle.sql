@@ -65,6 +65,9 @@ BEGIN
   PERFORM pg_temp.t_check('another customer cannot accept my fare', r->>'status' = 'REJECTED', r::text);
   r := pg_temp.t_cmd(cust, 'TRUSTRIDE_BUSINESS', 'CUSTOMER_APP', 'ACCEPT_QUOTATION', jsonb_build_object('quote_id', o.quote_id));
   PERFORM pg_temp.t_check('customer accepts the fare', r->>'status' = 'TRANSLATED', r::text);
+  PERFORM pg_temp.t_check('the fare buttons disappear at once, before the cycle runs',
+    NOT (trustride.fn_present_order_actions(ord)->>'accept_quote')::boolean AND NOT (trustride.fn_present_order_actions(ord)->>'decline_quote')::boolean,
+    trustride.fn_present_order_actions(ord)::text);
   PERFORM pg_temp.t_cycle(6);
   SELECT * INTO o FROM trustride.business_order WHERE order_id = ord;
   PERFORM pg_temp.t_check('fare locked -> order ready for the operator', o.status = 'JOB_CREATED' AND EXISTS (SELECT 1 FROM trustride.business_settlement WHERE order_id = ord), o.status::text);
