@@ -190,6 +190,23 @@ BEGIN
 END;
 $$;
 
+-- Act as a user: open their shell session and render one lawful projection.
+-- Returns the projection, or {"error": ...}; leaves the transaction as admin.
+CREATE OR REPLACE FUNCTION pg_temp.t_proj(p_user UUID, p_top TEXT, p_sub TEXT, p_code TEXT, p_params JSONB DEFAULT '{}'::jsonb) RETURNS JSONB LANGUAGE plpgsql AS $$
+DECLARE s UUID; r JSONB;
+BEGIN
+  PERFORM pg_temp.t_as(p_user);
+  BEGIN
+    s := trustride.fn_present_shell_session_open(p_top::trustride.present_top_shell_enum, p_sub::trustride.present_sub_shell_enum, p_user, 'WEB');
+    r := trustride.fn_present_projection(s, p_code, p_params);
+  EXCEPTION WHEN OTHERS THEN
+    r := jsonb_build_object('error', SQLERRM);
+  END;
+  PERFORM pg_temp.t_admin();
+  RETURN r;
+END;
+$$;
+
 -- Fixture: release every completed job's worker immediately (what the
 -- auto-verify sweep does after JOB_AUTO_VERIFY_MIN).
 CREATE OR REPLACE FUNCTION pg_temp.t_release_completed() RETURNS VOID LANGUAGE plpgsql AS $$
