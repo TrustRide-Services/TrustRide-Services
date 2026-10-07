@@ -113,3 +113,57 @@ BEGIN
   RETURN r;
 END;
 $$;
+
+-- Fixture: an approved operator formed into an on-duty working unit through
+-- the real Office commands (vehicle verified directly -- NTSA is suite 03).
+CREATE OR REPLACE FUNCTION pg_temp.t_ready_unit(p_founder UUID, p_class TEXT, p_estate UUID, p_label TEXT, p_caps TEXT[] DEFAULT ARRAY[]::TEXT[])
+RETURNS UUID LANGUAGE plpgsql AS $$
+DECLARE op UUID; obj UUID; fleet UUID; r JSONB; unit UUID; c TEXT;
+BEGIN
+  op := pg_temp.t_person(p_label, 'OPERATOR');
+  IF p_class <> 'EXECUTIVE_ASSISTANT_HUMAN' THEN
+    PERFORM pg_temp.t_as(p_founder);
+    obj := trustride.fn_registration_capture_object(
+      CASE p_class WHEN 'BODA_BODA' THEN 'MOTORCYCLE' WHEN 'TUKTUK' THEN 'TUKTUK' WHEN 'SEDAN' THEN 'CAR' WHEN 'PICKUP_TOWN' THEN 'PICKUP'
+        WHEN 'VAN_CARGO' THEN 'VAN' ELSE 'TRUCK' END, 'Test', p_class, 2024::smallint, 'T' || substr(md5(random()::text), 1, 6), NULL, p_founder);
+    PERFORM pg_temp.t_admin();
+    fleet := trustride.fn_resource_fleet_register(obj, p_class::trustride.resource_capacity_class_enum, 'OWNED', 'TEST', p_estate, p_founder);
+    UPDATE trustride.resource_fleet_register SET lifecycle_state = 'VERIFIED', inspection_status = 'PASSED', insurance_status = 'ACTIVE' WHERE fleet_resource_id = fleet;
+    PERFORM trustride.fn_resource_availability_move('FLEET', fleet, 'AVAILABLE', 'TEST_VERIFIED', p_founder);
+  END IF;
+  r := pg_temp.t_cmd(p_founder, 'TRUSTRIDE_OFFICE', 'ADMIN_CONSOLE', 'ONBOARD_OPERATOR',
+    jsonb_strip_nulls(jsonb_build_object('operator_user_id', op, 'capacity_class', p_class, 'estate_id', p_estate, 'fleet_resource_id', fleet)));
+  unit := (r->>'signal')::uuid;
+  IF unit IS NULL THEN RAISE EXCEPTION 't_ready_unit: onboarding failed: %', r; END IF;
+  FOREACH c IN ARRAY p_caps LOOP
+    PERFORM pg_temp.t_cmd(p_founder, 'TRUSTRIDE_OFFICE', 'ADMIN_CONSOLE', 'RECORD_CAPABILITY',
+      jsonb_build_object('workforce_unit_id', unit, 'capability_type', c, 'credential_ref', 'TEST-' || c, 'expires_at', now() + interval '1 year'));
+  END LOOP;
+  PERFORM pg_temp.t_cmd(op, 'TRUSTRIDE_OFFICE', 'OPERATOR_APP', 'SET_DUTY', '{"on_duty":true}');
+  RETURN unit;
+END;
+$$;
+
+-- Fixture: a customer with a verified M-Pesa phone.
+CREATE OR REPLACE FUNCTION pg_temp.t_customer(p_label TEXT) RETURNS UUID LANGUAGE plpgsql AS $$
+DECLARE c UUID;
+BEGIN
+  c := pg_temp.t_person(p_label, 'CUSTOMER');
+  INSERT INTO trustride.user_contact (user_id, contact_type, contact_value, is_primary, is_verified, verified_at, status)
+  VALUES (c, 'PHONE', '+2547' || lpad((floor(random() * 100000000))::bigint::text, 8, '0'), TRUE, TRUE, now(), 'ACTIVE');
+  RETURN c;
+END;
+$$;
+
+-- Fixture: open every working window for the rest of the transaction, so
+-- order suites behave the same whatever day and hour they run.
+CREATE OR REPLACE FUNCTION pg_temp.t_open_all_hours() RETURNS VOID LANGUAGE sql AS $$
+  UPDATE trustride.platform_configuration SET config_value = '00:00-23:59'
+  WHERE config_key IN ('WORKING_WINDOW_WEEKDAY', 'WORKING_WINDOW_SATURDAY', 'WORKING_WINDOW_SUNDAY');
+  DELETE FROM trustride.calendar_reference WHERE calendar_date = (now() AT TIME ZONE 'Africa/Nairobi')::date AND day_type = 'PUBLIC_HOLIDAY';
+$$;
+
+-- The order behind an Engine 11 command.
+CREATE OR REPLACE FUNCTION pg_temp.t_order(p_command JSONB) RETURNS trustride.business_order LANGUAGE sql AS $$
+  SELECT * FROM trustride.business_order WHERE correlation_id = (p_command->>'command_id')::uuid ORDER BY created_at DESC LIMIT 1;
+$$;
