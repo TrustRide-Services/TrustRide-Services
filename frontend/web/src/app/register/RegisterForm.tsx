@@ -26,6 +26,13 @@ export default function RegisterForm({ email }: { email: string | undefined }) {
         placeholder="National ID number"
         className="trs-input w-full text-text-primary rounded-xl px-4 py-3 mb-3 placeholder:text-text-muted"
       />
+      <input
+        name="phone"
+        type="tel"
+        inputMode="tel"
+        placeholder="Phone number (M-Pesa), e.g. 0712 345 678"
+        className="trs-input w-full text-text-primary rounded-xl px-4 py-3 mb-3 placeholder:text-text-muted"
+      />
       <label className="flex items-center gap-2.5 mb-6 text-xs text-text-secondary leading-snug">
         <input type="checkbox" name="consent" className="accent-gold" />
         I consent to TrustRide processing this data under the Data Protection Act.

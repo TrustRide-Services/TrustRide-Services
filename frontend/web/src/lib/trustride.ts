@@ -1,28 +1,61 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { ACCESS_COOKIE, ACTING_COOKIE, SESSION_COOKIE, TOP_OF, type SubShell } from "@/lib/shells";
 
-// Engine 11 v3.0.0 (TRS026-ENG011-PRESENT-003): exactly three main sovereign
-// shells, each with its own sub-shells. The database enforces who may open
-// which -- this file only names them.
-export type TopShell = "TRUSTRIDE_OFFICE" | "TRUSTRIDE_BUSINESS" | "TRUSTRIDE_MARKETPLACE";
-export type SubShell =
-  | "OPERATOR_APP"
-  | "ADMIN_CONSOLE"
-  | "EXECUTIVE_DASHBOARD"
-  | "CUSTOMER_APP"
-  | "PARTNER_APP"
-  | "GOVERNOR_APP"
-  | "INTERMEDIARY_APP"
-  | "MARKETPLACE_APP"
-  | "VENDOR_APP";
-
+export type { SubShell, TopShell } from "@/lib/shells";
+export { ACCESS_COOKIE } from "@/lib/shells";
 export type Environment = "CUSTOMER" | "PARTNER" | "GOVERNOR" | "INTERMEDIARY" | "OPERATOR";
 
-export const ACCESS_COOKIE = "trs_access_id";
+// Every screen reads through Engine 11's lawful projections and every action
+// goes through its command capture. The database decides who may do what;
+// this file only carries the call.
 
-// System Access is the first record of every visit (Sec.3.1). The id rides
-// in a browser-session cookie so every shell session opened during the visit
-// is linked back to the access event that began it.
+// ------------------------------------------------------------------ Gate
+export type GateContext = {
+  user_id: string;
+  registered: boolean;
+  display_name: string | null;
+  identity_status: string | null;
+  identity_primitive: string | null;
+  verification_failed_reasons: string[] | null;
+  phone_verified: boolean;
+  environments: { domain: Environment; status: string }[];
+  roles: string[];
+  founder_exists: boolean;
+  has_working_unit: boolean;
+  represented_entities: { user_id: string; legal_name: string; entity_type: string; status: string; membership_role: string;
+    environments: { domain: Environment; status: string }[] }[];
+  verification: { outcome: string; type: string } | null;
+  office_request: { order_code: string; status: string; surface: string; response: string | null } | null;
+  phone_contact: { contact_id: string; value: string; is_verified: boolean } | null;
+  simulated_messages: { channel: string; body: string; at: string }[];
+};
+
+export async function gateContext(): Promise<GateContext | null> {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return null;
+  const { data, error } = await supabase.rpc("fn_present_gate_context_v2");
+  if (error) throw new Error(humanize(error.message));
+  return data as GateContext;
+}
+
+export function envStatus(ctx: GateContext, env: Environment): string | undefined {
+  return ctx.environments.find((e) => e.domain === env)?.status;
+}
+
+export function officeAccess(ctx: GateContext) {
+  const has = (r: string) => ctx.roles.includes(r);
+  const founder = has("FOUNDER");
+  return {
+    founder,
+    admin: founder || has("ADMINISTRATOR"),
+    executive: founder || has("EXECUTIVE"),
+    operator: envStatus(ctx, "OPERATOR") === "ACTIVE" || has("DISPATCHER"),
+  };
+}
+
+// --------------------------------------------------------- System Access
 export async function recordSystemAccess(intent: "REGISTER" | "AUTHENTICATE" | "RESUME_SESSION") {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("fn_present_system_access_record", {
@@ -41,82 +74,110 @@ export async function bindSystemAccess(accessId: string, step: "REGISTRATION" | 
   (await cookies()).set(ACCESS_COOKIE, accessId, { httpOnly: true, sameSite: "lax", secure: true, path: "/" });
 }
 
-export async function openShellSession(topShell: TopShell, subShell: SubShell): Promise<string> {
-  const supabase = await createClient();
-  const { data: userData, error: userErr } = await supabase.auth.getUser();
-  if (userErr || !userData.user) throw userErr ?? new Error("Not signed in");
+// ------------------------------------------------------- Shell sessions
+// Business and Marketplace surfaces may act for an entity the person
+// represents (a company, a county authority); Office never does.
+async function actingIdentity(sub: SubShell, selfId: string): Promise<string> {
+  if (TOP_OF[sub] === "TRUSTRIDE_OFFICE") return selfId;
+  return (await cookies()).get(ACTING_COOKIE)?.value || selfId;
+}
 
-  const accessId = (await cookies()).get(ACCESS_COOKIE)?.value;
+async function openSession(sub: SubShell): Promise<{ id: string } | { error: string }> {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { error: "Sign in first." };
+  const jar = await cookies();
+  const acting = await actingIdentity(sub, auth.user.id);
   const { data, error } = await supabase.rpc("fn_present_shell_session_open", {
-    p_top_shell: topShell,
-    p_sub_shell: subShell,
-    p_user_id: userData.user.id,
+    p_top_shell: TOP_OF[sub],
+    p_sub_shell: sub,
+    p_user_id: acting,
     p_channel_type: "WEB",
-    p_access_id: accessId ?? null,
+    p_access_id: jar.get(ACCESS_COOKIE)?.value ?? null,
   });
-  if (error) throw error;
-  return data as string;
+  if (error) return { error: humanize(error.message) };
+  try {
+    // Only Server Actions may set cookies; during a render this throws and
+    // the middleware keeps the cookie fresh instead.
+    jar.set(SESSION_COOKIE(sub), `${acting}:${data}`, { httpOnly: true, sameSite: "lax", secure: true, path: "/", maxAge: 60 * 60 * 8 });
+  } catch {}
+  return { id: data as string };
 }
 
-// Every human action passes through Engine 11's command capture before any
-// signal exists -- never a direct table write.
-export async function captureCommand(topShell: TopShell, subShell: SubShell, commandType: string, payload: Record<string, unknown>) {
+async function shellSession(sub: SubShell, fresh = false): Promise<{ id: string } | { error: string }> {
+  if (!fresh) {
+    const supabase = await createClient();
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return { error: "Sign in first." };
+    const raw = (await cookies()).get(SESSION_COOKIE(sub))?.value;
+    const acting = await actingIdentity(sub, auth.user.id);
+    if (raw) {
+      const [owner, id] = raw.split(":");
+      if (owner === acting && id) return { id };
+    }
+  }
+  return openSession(sub);
+}
+
+// ---------------------------------------------------------- Projections
+export async function project<T = Record<string, unknown>>(sub: SubShell, code: string, params: Record<string, unknown> = {}):
+  Promise<{ data: T; error: null } | { data: null; error: string }> {
   const supabase = await createClient();
-  const sessionId = await openShellSession(topShell, subShell);
-
-  const { data: commandId, error } = await supabase.rpc("fn_present_capture_command", {
-    p_shell_session_id: sessionId,
-    p_command_type: commandType,
-    p_command_payload: payload,
-  });
-  if (error) throw error;
-
-  const { data: result, error: readErr } = await supabase
-    .from("present_command_capture")
-    .select("command_id, translation_status, translated_signal_id, rejection_reason")
-    .eq("command_id", commandId)
-    .single();
-  if (readErr) throw readErr;
-  return result as { command_id: string; translation_status: string; translated_signal_id: string | null; rejection_reason: string | null };
+  for (const fresh of [false, true]) {
+    const s = await shellSession(sub, fresh);
+    if ("error" in s) return { data: null, error: s.error };
+    const { data, error } = await supabase.rpc("fn_present_projection", { p_session: s.id, p_code: code, p_params: params });
+    if (!error) return { data: data as T, error: null };
+    if (!fresh && error.message.includes("SESSION_INVALID")) continue;
+    return { data: null, error: humanize(error.message) };
+  }
+  return { data: null, error: "Could not open your shell" };
 }
 
-// Who is this person, as far as routing is concerned: identity status, every
-// environment they hold (with its status), and any Office authority role.
-export async function getActorContext() {
+// ------------------------------------------------------------- Commands
+export type CommandResult = { ok: boolean; error: string | null; signal: string | null; commandId: string | null };
+
+export async function command(sub: SubShell, commandType: string, payload: Record<string, unknown>): Promise<CommandResult> {
   const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) return null;
-
-  const [{ data: profile }, { data: registrations }, founder, admin, executive] = await Promise.all([
-    supabase.from("platform_users").select("user_id, display_name, status").eq("user_id", userData.user.id).maybeSingle(),
-    supabase
-      .from("business_actor_registration")
-      .select("user_type_domain, registration_status, registered_at")
-      .eq("user_id", userData.user.id)
-      .order("registered_at", { ascending: false }),
-    supabase.rpc("fn_am_i_role", { p_role_codes: ["FOUNDER"] }),
-    supabase.rpc("fn_am_i_role", { p_role_codes: ["ADMINISTRATOR"] }),
-    supabase.rpc("fn_am_i_role", { p_role_codes: ["EXECUTIVE"] }),
-  ]);
-
-  const envStatus = new Map<Environment, string>();
-  for (const r of registrations ?? []) envStatus.set(r.user_type_domain as Environment, r.registration_status);
-
-  const isFounder = founder.data === true;
-  const office = {
-    admin: isFounder || admin.data === true,
-    executive: isFounder || executive.data === true,
-    operator: isFounder || envStatus.get("OPERATOR") === "ACTIVE",
-  };
-
-  return {
-    user: userData.user,
-    profile,
-    envStatus,
-    isFounder,
-    office,
-    isStaff: office.admin || office.executive || office.operator,
-  };
+  for (const fresh of [false, true]) {
+    const s = await shellSession(sub, fresh);
+    if ("error" in s) return { ok: false, error: s.error, signal: null, commandId: null };
+    const { data, error } = await supabase.rpc("fn_present_command_execute", { p_session: s.id, p_command_type: commandType, p_payload: payload });
+    if (error) {
+      if (!fresh && error.message.includes("SESSION_INVALID")) continue;
+      return { ok: false, error: humanize(error.message), signal: null, commandId: null };
+    }
+    const r = data as { command_id: string; status: string; reason: string | null; signal: string | null };
+    if (r.status === "TRANSLATED") return { ok: true, error: null, signal: r.signal, commandId: r.command_id };
+    if (r.status === "CAPTURED") return { ok: false, error: "This action is recorded but has no live handler yet.", signal: null, commandId: r.command_id };
+    return { ok: false, error: humanize(r.reason ?? "Rejected"), signal: null, commandId: r.command_id };
+  }
+  return { ok: false, error: "Could not open your shell", signal: null, commandId: null };
 }
 
-export type ActorContext = NonNullable<Awaited<ReturnType<typeof getActorContext>>>;
+// Database messages are written for people already; strip the function
+// prefixes and technical tails.
+export function humanize(message: string): string {
+  return message
+    .replace(/^(ERROR:\s*)?/, "")
+    .replace(/^(fn_[a-z0-9_]+|present_command_capture [0-9a-f-]+):\s*/i, "")
+    .replace(/\s*\(FDN-001[^)]*\)/g, "")
+    .replace(/^SESSION_INVALID:\s*/, "")
+    .trim();
+}
+
+// The Business sub-shell a person's shared pages (profile, support, inbox)
+// open on: Customer_App if they hold it, else the request surface they hold.
+export function businessSub(ctx: GateContext): SubShell {
+  if (envStatus(ctx, "CUSTOMER")) return "CUSTOMER_APP";
+  if (envStatus(ctx, "PARTNER")) return "PARTNER_APP";
+  if (envStatus(ctx, "GOVERNOR")) return "GOVERNOR_APP";
+  if (envStatus(ctx, "INTERMEDIARY")) return "INTERMEDIARY_APP";
+  return "CUSTOMER_APP";
+}
+
+// The Office sub-shell a shared Office page opens on: Admin Console for
+// Administrators (and the Founder), Executive Dashboard for Executives.
+export function officeSub(ctx: GateContext): SubShell {
+  return officeAccess(ctx).admin ? "ADMIN_CONSOLE" : "EXECUTIVE_DASHBOARD";
+}

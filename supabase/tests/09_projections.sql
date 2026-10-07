@@ -28,6 +28,11 @@ BEGIN
   PERFORM pg_temp.t_admin();
   PERFORM pg_temp.t_check('Gate context: identity, environments, phone', (p->>'registered')::boolean AND (p->>'phone_verified')::boolean
     AND p->'environments' @> '[{"domain":"CUSTOMER","status":"ACTIVE"}]', p::text);
+  PERFORM pg_temp.t_as(cust);
+  p := trustride.fn_present_gate_context_v2();
+  PERFORM pg_temp.t_admin();
+  PERFORM pg_temp.t_check('Gate context v2: own verified phone contact and verification outcome',
+    (p->'phone_contact'->>'is_verified')::boolean AND p->'phone_contact' ? 'contact_id' AND p ? 'verification' AND p ? 'office_request', p::text);
 
   -- Customer
   p := pg_temp.t_proj(cust, 'TRUSTRIDE_BUSINESS', 'CUSTOMER_APP', 'SERVICE_CATALOGUE');

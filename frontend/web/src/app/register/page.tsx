@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import RegisterForm from "./RegisterForm";
 import SignUpForm from "./SignUpForm";
-import { signOutAction } from "@/app/dashboard/actions";
+import { signOutAction } from "@/app/actions";
 
 // RENDERING STRATEGY: fully dynamic. This is the one screen that must
 // branch on whether a session already exists at all, so it's read straight

@@ -37,6 +37,13 @@ export default function SignUpForm() {
         className="trs-input w-full text-text-primary rounded-xl px-4 py-3 mb-3 placeholder:text-text-muted"
       />
       <input
+        name="phone"
+        type="tel"
+        inputMode="tel"
+        placeholder="Phone number (M-Pesa), e.g. 0712 345 678"
+        className="trs-input w-full text-text-primary rounded-xl px-4 py-3 mb-3 placeholder:text-text-muted"
+      />
+      <input
         type="email"
         name="email"
         autoCapitalize="off"

@@ -12,9 +12,9 @@ import { ACCESS_COOKIE, type Environment } from "@/lib/trustride";
 // the database decides status, this only records the choice and routes.
 const DESTINATION: Record<Exclude<Environment, "OPERATOR">, string> = {
   CUSTOMER: "/dashboard",
-  PARTNER: "/dashboard/requests?as=PARTNER",
-  GOVERNOR: "/dashboard/requests?as=GOVERNOR",
-  INTERMEDIARY: "/dashboard/requests?as=INTERMEDIARY",
+  PARTNER: "/dashboard/partner",
+  GOVERNOR: "/dashboard/governor",
+  INTERMEDIARY: "/dashboard/intermediary",
 };
 
 export async function chooseEnvironment(env: Exclude<Environment, "OPERATOR">, destination?: string) {

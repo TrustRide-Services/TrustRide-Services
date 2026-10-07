@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { ACTING_COOKIE, SESSION_COOKIE, TOP_OF, subShellForPath } from "@/lib/shells";
 
 // Refreshes the Supabase auth session on every single request -- this is
 // what makes the app genuinely server-rendered per request rather than
@@ -54,6 +55,30 @@ export async function updateSession(request: NextRequest) {
   }
   if (accessCookie) {
     response.cookies.set("trs_access_id", accessCookie, { httpOnly: true, sameSite: "lax", secure: true, path: "/" });
+  }
+
+  // Keep an Engine 11 shell session ready for the surface being visited, so
+  // every projection and command on the page shares one session. The
+  // database decides whether this person may open it; if not, no cookie is
+  // set and the page shows why.
+  const sub = userData.user ? subShellForPath(request.nextUrl.pathname) : null;
+  if (userData.user && sub) {
+    const acting = TOP_OF[sub] === "TRUSTRIDE_OFFICE" ? userData.user.id : (request.cookies.get(ACTING_COOKIE)?.value || userData.user.id);
+    const cached = request.cookies.get(SESSION_COOKIE(sub))?.value;
+    if (!cached || cached.split(":")[0] !== acting) {
+      const { data: sessionId } = await supabase.rpc("fn_present_shell_session_open", {
+        p_top_shell: TOP_OF[sub],
+        p_sub_shell: sub,
+        p_user_id: acting,
+        p_channel_type: "WEB",
+        p_access_id: accessCookie ?? request.cookies.get("trs_access_id")?.value ?? null,
+      });
+      if (sessionId) {
+        const value = `${acting}:${sessionId}`;
+        request.cookies.set(SESSION_COOKIE(sub), value);
+        response.cookies.set(SESSION_COOKIE(sub), value, { httpOnly: true, sameSite: "lax", secure: true, path: "/", maxAge: 60 * 60 * 8 });
+      }
+    }
   }
 
   return response;

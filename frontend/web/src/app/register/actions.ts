@@ -20,6 +20,7 @@ export async function signUpAndRegister(_prevState: unknown, formData: FormData)
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const consent = formData.get("consent") === "on";
+  const phone = String(formData.get("phone") ?? "").trim();
 
   if (!legalName) return { error: "Enter your full legal name, as on your ID." };
   if (!nationalId) return { error: "TrustRide verifies every identity -- enter your national ID number." };
@@ -47,6 +48,7 @@ export async function signUpAndRegister(_prevState: unknown, formData: FormData)
     p_consent_given: true,
   });
   if (regError) return { error: regError.message };
+  await capturePhone(supabase, phone);
 
   await bindSystemAccess(accessId, "REGISTRATION");
   redirect("/verify");
@@ -64,6 +66,7 @@ export async function submitRegistration(_prevState: unknown, formData: FormData
   const legalName = String(formData.get("legalName") ?? "").trim();
   const nationalId = String(formData.get("nationalId") ?? "").trim();
   const consent = formData.get("consent") === "on";
+  const phone = String(formData.get("phone") ?? "").trim();
 
   if (!legalName) return { error: "Enter your full legal name, as on your ID." };
   if (!nationalId) return { error: "TrustRide verifies every identity -- enter your national ID number." };
@@ -76,6 +79,15 @@ export async function submitRegistration(_prevState: unknown, formData: FormData
     p_consent_given: true,
   });
   if (error) return { error: error.message };
+  await capturePhone(supabase, phone);
 
   redirect("/verify");
+}
+
+// The phone (M-Pesa and SMS, D3) is captured with the identity and a code
+// sent at once. Best effort: a number Foundation refuses is asked for again
+// at the Gate, with the reason, rather than failing the registration.
+async function capturePhone(supabase: Awaited<ReturnType<typeof createClient>>, phone: string) {
+  if (!phone) return;
+  await supabase.rpc("fn_user_contact_add", { p_contact_type: "PHONE", p_contact_value: phone });
 }
