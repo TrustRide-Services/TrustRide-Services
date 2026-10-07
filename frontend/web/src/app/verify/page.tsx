@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { envStatus, gateContext, officeAccess, type Environment } from "@/lib/trustride";
-import { chooseEnvironment, claimFounder, enterMarketplaceAsBuyer, refreshVerification, requestOfficeAccess } from "./actions";
+import { chooseEnvironment, chooseEnvironmentForEntity, claimFounder, enterMarketplaceAsBuyer, refreshVerification, requestOfficeAccess } from "./actions";
 import { addContactAction, resendCodeAction, signOutAction, verifyContactAction } from "@/app/actions";
 import ActionForm from "@/components/ActionForm";
 import { inputClass, when } from "@/components/ui";
@@ -77,6 +77,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
           <Image src="/trustride-logo.png" alt="TrustRide" width={80} height={80} className="relative" />
         </div>
         {gateError && <p className="text-danger text-sm mb-4 max-w-md">{gateError}</p>}
+        {notice === "entity-environment" && <p className="text-success text-sm mb-4 max-w-md">Done — switch to the organisation with “Act as” inside the shell.</p>}
         {notice === "office-requested" && <p className="text-success text-sm mb-4 max-w-md">Office access requested — TrustRide Office decides within 2–3 working days.</p>}
 
         {isRejected ? (
@@ -167,7 +168,26 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
                   })}
                 </div>
                 {ctx.represented_entities.length > 0 && (
-                  <p className="text-xs text-text-muted mt-3">You also represent {ctx.represented_entities.map((e) => e.legal_name).join(", ")} — switch to it with “Act as” inside the shell.</p>
+                  <div className="flex flex-col gap-2.5 mt-4">
+                    <p className="text-xs text-text-muted">Organisations you represent — open an environment for one, then switch to it with “Act as” inside the shell.</p>
+                    {ctx.represented_entities.map((e) => (
+                      <div key={e.user_id} className="trs-card p-3 flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm text-text-primary font-semibold">{e.legal_name} <span className="text-text-muted text-xs font-normal">{e.entity_type.toLowerCase().replaceAll("_", " ")}</span></span>
+                        {e.status !== "ACTIVE" ? <span className="text-xs text-gold-light">Verification with BRS/KRA in progress</span> : (
+                          <span className="flex flex-wrap gap-2">
+                            {BUSINESS.map((b) => {
+                              const st = e.environments.find((x) => x.domain === b.env)?.status;
+                              return st ? <span key={b.env} className="text-xs text-text-secondary flex items-center gap-1">{b.label} <StatusChip status={st} /></span> : (
+                                <form key={b.env} action={chooseEnvironmentForEntity.bind(null, e.user_id, b.env)}>
+                                  <button type="submit" className="trs-btn-ghost rounded-lg px-3 py-1 text-xs font-semibold">{b.env === "CUSTOMER" ? "Open Customer account" : `Apply as ${b.label}`}</button>
+                                </form>
+                              );
+                            })}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </section>
 

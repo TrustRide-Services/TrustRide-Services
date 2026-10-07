@@ -27,7 +27,7 @@ $tail$;
 TAIL
   } > "$tmp"
   if [ "$TARGET" = "local" ]; then
-    out=$(MSYS_NO_PATHCONV=1 docker exec -i trs_local17 psql -U supabase_admin -d postgres -X -q -1 < "$tmp" 2>&1)
+    out=$(MSYS_NO_PATHCONV=1 docker exec -i "${TRS_LOCAL_CONTAINER:-trs_local17}" psql -U supabase_admin -d postgres -X -q -1 < "$tmp" 2>&1)
   else
     out=$(cd ../.. && supabase db query --linked -f "$tmp" 2>&1)
   fi

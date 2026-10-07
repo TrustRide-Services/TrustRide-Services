@@ -32,6 +32,17 @@ export async function chooseEnvironment(env: Exclude<Environment, "OPERATOR">, d
   redirect(destination ?? DESTINATION[env]);
 }
 
+// Open an environment for an organisation the person represents (a company
+// as a Customer, a county authority as a Governor). Foundation checks the
+// representation; the person then switches to it with "Act as".
+export async function chooseEnvironmentForEntity(entityId: string, env: Exclude<Environment, "OPERATOR">) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_business_actor_register", { p_user_id: entityId, p_user_type_domain: env });
+  if (error) redirect(`/verify?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/verify");
+  redirect("/verify?notice=entity-environment");
+}
+
 export async function enterMarketplaceAsBuyer() {
   await chooseEnvironment("CUSTOMER", "/marketplace");
 }

@@ -1,5 +1,6 @@
 import { gateContext, project } from "@/lib/trustride";
-import type { SubShell } from "@/lib/shells";
+import { cookies } from "next/headers";
+import { ACTING_COOKIE, TOP_OF, type SubShell } from "@/lib/shells";
 import ActionForm from "@/components/ActionForm";
 import CommandForm from "@/components/CommandForm";
 import {
@@ -23,6 +24,11 @@ export default async function ProfileCenter({ sub, referralSub }: { sub: SubShel
   const [{ data: p, error }, ctx] = await Promise.all([project<Profile>(sub, "MY_PROFILE"), gateContext()]);
   if (!p) return <Page title="Profile"><ErrorNote error={error} /></Page>;
   const pref = (c: string) => p.preferences.find((x) => x.channel === c);
+  // Acting for an organisation: its contacts are managed here by its
+  // representative (the database checks the representation).
+  const acting = TOP_OF[sub] === "TRUSTRIDE_OFFICE" ? "" : (await cookies()).get(ACTING_COOKIE)?.value ?? "";
+  const owner = ctx?.represented_entities.some((e) => e.user_id === acting) ? acting : "";
+  const ownerField = owner ? <input type="hidden" name="owner" value={owner} /> : null;
   return (
     <Page title="Profile" intro={`${p.identity.display_name} · ${p.identity.global_uid}`}>
       <Section title="Contact methods">
@@ -53,6 +59,7 @@ export default async function ProfileCenter({ sub, referralSub }: { sub: SubShel
             </div>
           ))}
           <ActionForm action={addContactAction} submit="Add and send code" inline>
+            {ownerField}
             <label className={labelClass}>Type
               <select name="type" className={inputClass}><option value="PHONE">Phone</option><option value="WHATSAPP">WhatsApp</option><option value="EMAIL">Email</option></select>
             </label>
@@ -72,6 +79,7 @@ export default async function ProfileCenter({ sub, referralSub }: { sub: SubShel
           {["SMS", "WHATSAPP", "EMAIL"].map((ch) => (
             <Card key={ch}>
               <ActionForm action={setPreferenceAction} submit="Save" variant="ghost">
+                {ownerField}
                 <input type="hidden" name="channel" value={ch} />
                 <label className="flex items-center gap-2 text-sm text-text-primary">
                   <input type="checkbox" name="allowed" defaultChecked={pref(ch)?.allowed ?? true} /> {ch === "WHATSAPP" ? "WhatsApp" : ch === "SMS" ? "SMS" : "Email"}

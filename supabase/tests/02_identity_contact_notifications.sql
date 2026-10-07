@@ -125,6 +125,31 @@ BEGIN
     pg_temp.t_fails(format('SELECT trustride.fn_present_shell_session_open(''TRUSTRIDE_BUSINESS'', ''PARTNER_APP'', %L, ''WEB'')', ent)));
   PERFORM pg_temp.t_check('a non-representative cannot register environments for the entity',
     pg_temp.t_fails(format('SELECT trustride.fn_business_actor_register(%L, ''CUSTOMER'')', ent)));
+  PERFORM pg_temp.t_check('a non-representative cannot add contacts to the entity',
+    pg_temp.t_fails(format('SELECT trustride.fn_user_contact_add_for(%L, ''PHONE'', ''0722000777'')', ent)));
+
+  -- The organisation's own M-Pesa phone, managed by its representative (D3).
+  PERFORM pg_temp.t_as(rep);
+  c_other := trustride.fn_user_contact_add_for(ent, 'PHONE', '0722000777');
+  PERFORM pg_temp.t_admin();
+  PERFORM pg_temp.t_check('representative adds the entity''s phone (on the entity, not on themself)',
+    EXISTS (SELECT 1 FROM trustride.user_contact WHERE contact_id = c_other AND user_id = ent));
+  -- The suite reads the code from the simulated outbound message, as the
+  -- organisation's phone would receive it.
+  PERFORM pg_temp.t_cycle(4);
+  SELECT payload->>'body' INTO v_body FROM trustride.integration_notification_dispatch_log
+  WHERE recipient_ref = ent ORDER BY created_at DESC LIMIT 1;
+  v_code := substring(v_body FROM '(\d{6})');
+  PERFORM pg_temp.t_check('the code went to the entity''s own number', v_code IS NOT NULL, v_body);
+  PERFORM pg_temp.t_as(rep);
+  ok := trustride.fn_user_contact_verify(c_other, v_code);
+  PERFORM pg_temp.t_admin();
+  PERFORM pg_temp.t_check('representative verifies it; it is the entity''s M-Pesa payer', ok AND trustride.fn_user_payment_msisdn(ent) = '254722000777',
+    coalesce(trustride.fn_user_payment_msisdn(ent), 'none'));
+  PERFORM pg_temp.t_as(outsider);
+  PERFORM pg_temp.t_check('a non-representative cannot remove the entity''s phone',
+    pg_temp.t_fails(format('SELECT trustride.fn_user_contact_remove(%L)', c_other)));
+  PERFORM pg_temp.t_admin();
 
   -- ------------------------------------------ registrant class EXTERNAL_SYSTEM
   PERFORM pg_temp.t_as(cust);

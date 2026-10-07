@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { ACCESS_COOKIE, ACTING_COOKIE, SESSION_COOKIE, TOP_OF, type SubShell } from "@/lib/shells";
@@ -82,7 +83,12 @@ async function actingIdentity(sub: SubShell, selfId: string): Promise<string> {
   return (await cookies()).get(ACTING_COOKIE)?.value || selfId;
 }
 
-async function openSession(sub: SubShell): Promise<{ id: string } | { error: string }> {
+// One new session per surface per request: when a page renders before the
+// middleware has set its cookie (e.g. right after a server action redirects
+// into a shell), every projection on it shares the session opened first.
+const openSession = cache(openSessionUncached);
+
+async function openSessionUncached(sub: SubShell): Promise<{ id: string } | { error: string }> {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { error: "Sign in first." };

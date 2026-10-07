@@ -61,7 +61,10 @@ export async function updateSession(request: NextRequest) {
   // every projection and command on the page shares one session. The
   // database decides whether this person may open it; if not, no cookie is
   // set and the page shows why.
-  const sub = userData.user ? subShellForPath(request.nextUrl.pathname) : null;
+  // A link prefetch is not a visit: opening a session for it would record a
+  // shell the person never entered (every Gate link would open one).
+  const prefetch = request.headers.get("next-router-prefetch") === "1" || /prefetch/i.test(request.headers.get("purpose") ?? request.headers.get("sec-purpose") ?? "");
+  const sub = userData.user && !prefetch ? subShellForPath(request.nextUrl.pathname) : null;
   if (userData.user && sub) {
     const acting = TOP_OF[sub] === "TRUSTRIDE_OFFICE" ? userData.user.id : (request.cookies.get(ACTING_COOKIE)?.value || userData.user.id);
     const cached = request.cookies.get(SESSION_COOKIE(sub))?.value;

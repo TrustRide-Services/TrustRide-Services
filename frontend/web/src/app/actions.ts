@@ -81,8 +81,12 @@ async function rpc(fn: string, args: Record<string, unknown>): Promise<ActionSta
   return { ok: true, message: "Saved." };
 }
 
+// "owner" is present only when acting for an organisation (Profile); the
+// Gate and a person's own Profile always manage their own contacts.
 export async function addContactAction(_p: ActionState, fd: FormData): Promise<ActionState> {
-  const r = await rpc("fn_user_contact_add", { p_contact_type: String(fd.get("type")), p_contact_value: String(fd.get("value") ?? "") });
+  const owner = String(fd.get("owner") ?? "");
+  const args = { p_contact_type: String(fd.get("type")), p_contact_value: String(fd.get("value") ?? "") };
+  const r = owner ? await rpc("fn_user_contact_add_for", { p_owner: owner, ...args }) : await rpc("fn_user_contact_add", args);
   return r?.ok ? { ok: true, message: "We sent a code to verify it." } : r;
 }
 export async function verifyContactAction(_p: ActionState, fd: FormData): Promise<ActionState> {
@@ -104,10 +108,12 @@ export async function removeContactAction(_p: ActionState, fd: FormData) {
   return rpc("fn_user_contact_remove", { p_contact_id: String(fd.get("contact_id")) });
 }
 export async function setPreferenceAction(_p: ActionState, fd: FormData) {
-  return rpc("fn_user_contact_preference_set", {
+  const owner = String(fd.get("owner") ?? "");
+  const args = {
     p_channel: String(fd.get("channel")), p_allowed: fd.get("allowed") === "on",
     p_allowed_from: String(fd.get("from") ?? "") || null, p_allowed_to: String(fd.get("to") ?? "") || null,
-  });
+  };
+  return owner ? rpc("fn_user_contact_preference_set_for", { p_owner: owner, ...args }) : rpc("fn_user_contact_preference_set", args);
 }
 export async function declareKraAction(_p: ActionState, fd: FormData) {
   return rpc("fn_registration_declare_kra_pin", { p_kra_pin: String(fd.get("kra_pin") ?? "") });
