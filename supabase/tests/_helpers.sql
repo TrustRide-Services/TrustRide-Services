@@ -167,3 +167,35 @@ $$;
 CREATE OR REPLACE FUNCTION pg_temp.t_order(p_command JSONB) RETURNS trustride.business_order LANGUAGE sql AS $$
   SELECT * FROM trustride.business_order WHERE correlation_id = (p_command->>'command_id')::uuid ORDER BY created_at DESC LIMIT 1;
 $$;
+
+-- Fixture: drive a one-stop boda order to COMPLETED through the real verbs.
+-- Returns the order id. A boda unit must be on duty.
+CREATE OR REPLACE FUNCTION pg_temp.t_order_to_completed(p_cust UUID) RETURNS UUID LANGUAGE plpgsql AS $$
+DECLARE r JSONB; o trustride.business_order; op UUID; j UUID; i INT;
+BEGIN
+  r := pg_temp.t_cmd(p_cust, 'TRUSTRIDE_BUSINESS', 'CUSTOMER_APP', 'RAISE_INTENT', jsonb_build_object('service_code', 'TRANSPORT-BODA-STANDARD',
+    'order_lines', '[{"scope_detail":{"origin_zone_code":"KSM-CBD-01","destination_zone_code":"KSM-MILIMANI-02"}}]'::jsonb));
+  o := pg_temp.t_order(r);
+  PERFORM pg_temp.t_cycle(12);
+  SELECT * INTO o FROM trustride.business_order WHERE order_id = o.order_id;
+  PERFORM pg_temp.t_cmd(p_cust, 'TRUSTRIDE_BUSINESS', 'CUSTOMER_APP', 'ACCEPT_QUOTATION', jsonb_build_object('quote_id', o.quote_id));
+  PERFORM pg_temp.t_cycle(4);
+  SELECT operator_user_id INTO op FROM trustride.resource_workforce_unit WHERE workforce_unit_id = o.reserved_workforce_unit_id;
+  SELECT job_id INTO j FROM trustride.business_job WHERE order_id = o.order_id;
+  FOR i IN 1..6 LOOP  -- ACKNOWLEDGED .. COMPLETED
+    PERFORM pg_temp.t_cmd(op, 'TRUSTRIDE_OFFICE', 'OPERATOR_APP', 'EMIT_PROGRESS_SIGNAL', jsonb_build_object('job_id', j));
+  END LOOP;
+  PERFORM pg_temp.t_cycle(8);
+  RETURN o.order_id;
+END;
+$$;
+
+-- Fixture: release every completed job's worker immediately (what the
+-- auto-verify sweep does after JOB_AUTO_VERIFY_MIN).
+CREATE OR REPLACE FUNCTION pg_temp.t_release_completed() RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+  UPDATE trustride.business_job SET completed_at = now() - interval '1 hour' WHERE status = 'COMPLETED';
+  PERFORM trustride.fn_business_dispatch_sweep();
+  PERFORM pg_temp.t_cycle(4);
+END;
+$$;
