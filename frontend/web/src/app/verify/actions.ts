@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ACCESS_COOKIE, type Environment } from "@/lib/trustride";
+import { ACCESS_COOKIE, gateContext, type Environment } from "@/lib/trustride";
 
 // Post-authorization routing (TRS026-ENG011-PRESENT-003 Sec.4, Sec.6).
 // Customer activates immediately; Partner, Governor and Intermediary register
@@ -69,7 +69,11 @@ export async function requestOfficeAccess(formData: FormData) {
 export async function claimFounder() {
   const supabase = await createClient();
   const { error } = await supabase.rpc("fn_founder_bootstrap");
-  if (error) redirect(`/verify?error=${encodeURIComponent(error.message)}`);
+  // A repeated submission (double click, resent form) is refused by the
+  // database once the first one succeeded; the caller is already Founder.
+  if (error && !(await gateContext())?.roles.includes("FOUNDER")) {
+    redirect(`/verify?error=${encodeURIComponent(error.message)}`);
+  }
   revalidatePath("/verify");
   redirect("/office");
 }

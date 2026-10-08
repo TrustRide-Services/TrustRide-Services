@@ -27,6 +27,10 @@ const OPERATOR_EMAIL = "operator@trustride.test";
     const claim = page.getByRole("button", { name: "Claim Founder authority" });
     step("Operator, no Founder yet: Founder claim is offered", (await claim.count()) === 1);
 
+    // A second tab holding the same Gate, to replay the claim afterwards.
+    const stale = await ctx.newPage();
+    await stale.goto(`${BASE}/verify`);
+
     if (await claim.count()) {
       await claim.click();
       await page.waitForURL(/\/office/, { timeout: 30000 }).catch(() => {});
@@ -35,6 +39,12 @@ const OPERATOR_EMAIL = "operator@trustride.test";
       await page.goto(`${BASE}/verify`);
       step("Gate: shows Office access as Founder, claim no longer offered",
         (await page.getByText("You hold TrustRide Office access as Founder").count()) > 0 && (await claim.count()) === 0);
+
+      // Repeat submission by the same person (double click / stale tab).
+      await stale.getByRole("button", { name: "Claim Founder authority" }).click();
+      await stale.waitForURL((u) => !u.pathname.endsWith("/verify") || u.search.includes("error"), { timeout: 30000 }).catch(() => {});
+      step("Repeat claim by the Founder: lands in the Office, no database error shown",
+        new URL(stale.url()).pathname.startsWith("/office") && !stale.url().includes("error"), stale.url());
     }
   } finally {
     await b.close();
