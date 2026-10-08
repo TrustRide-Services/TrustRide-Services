@@ -1,0 +1,238 @@
+// Single source of truth for the Implementation Completion Report.
+// Block types: h1, h2, p, bullets, table, callout
+
+module.exports = {
+  base: "TrustRide_Implementation_Completion_Report_2026-10-08",
+  eyebrow: "TrustRide Services · Implementation completion",
+  title: "Implementation Completion Report",
+  subtitle: "The Master Implementation Completion Directive, G1–G20 and D1–D4: what was built, how it was proven, and what is left",
+  footer: "TrustRide Services — Implementation Completion Report, 8 October 2026. Evidence: SQL suites on trustride-stagging, browser journeys on a full local Supabase stack built from the same migrations.",
+  meta: [
+    ["Prepared for", "Founder & CEO, TrustRide Services"],
+    ["Date", "8 October 2026"],
+    ["Directive", "TRUSTRIDE SERVICES MASTER IMPLEMENTATION COMPLETION DIRECTIVE (follows the Engine 11 Compatibility Check of 1 October 2026)"],
+    ["Environment", "trustride-stagging (Supabase, ref fdkzewkogkujtwvonesn) · repository TrustRide-Services (main, last commit aa738b0) · Next.js frontend live at https://trustride-services.vercel.app (Vercel team trust-ride, connected to staging)"],
+    ["Not touched", "trustride-production"],
+  ],
+  blocks: [
+    { h1: "The answer in one page" },
+    { p: "Every gap the compatibility check found (G1–G20) is now built into the software, and every Founder decision was applied as you directed (D1 Sunday closed, D2 estimate before dispatch, D3 one verified phone per identity, D4 Governor sees nothing until a scope is granted). The engines were not redesigned: 21 new migrations, 3 edge functions and a rebuilt frontend finish the system around them." },
+    { p: "It was proven two ways. First, 10 database test suites (407 checks) pass on trustride-stagging. Second — and this is what the directive asks for — every actor's journey was run through the real screens in a real browser against a full local copy of the platform (sign-in, Data API, background jobs) built from the same migrations, starting from an empty database: register, verify identity and phone, apply, be approved, work, pay, be tracked, get support. " + "In all, 194 checks were made through the screens: a clean run of 135 from an empty database (132 passed; of the 3 flagged, one was the booking button correctly refusing a company that had no verified phone yet, and two were real screen defects, both fixed) and follow-up runs of 59 covering those fixes, a real Administrator and Executive, a company's ride to receipt, and support from every surface including a company's (55 passed; 3 were a slip in the test script, which booked a sedan nobody can serve, and 1 was a real defect — a company could not approve its own payment on staging — fixed and re-proven)." },
+    { p: "Running real journeys found three defects that the rollback-only database tests could not see, and all three are fixed and re-proven: (1) every command from a non-Office user was refused at the moment the database committed it; (2) a company acting through its representative could never hold its own M-Pesa phone, so it could never book; (3) the Gate gave no way to open an account for a company. Smaller findings were fixed too: a company could not approve its own payment on the staging simulator; link prefetching opened shell sessions nobody entered; the fare buttons stayed on screen for a few seconds after a fare was accepted; an approved Governor saw an empty data heading." },
+    { table: { head: ["Area", "Status", "In plain words"], rows: [
+      ["Software for every journey A–H", "GREEN", "Built and proven end to end through the screens, including the failure paths."],
+      ["Security / authorization", "GREEN", "Each actor sees and does only what their role allows — proven in the browser and directly against the Data API; zero conformance violations."],
+      ["Background jobs", "GREEN", "18 scheduled jobs active and measured; health is computed, not assumed."],
+      ["Real payments, SMS, WhatsApp, NTSA, IPRS, Protrack", "AMBER", "Adapters are written and switchable per port; every port still runs its simulator because no provider credentials are installed yet."],
+      ["Email and push notifications", "AMBER", "Not connected: email provider undecided; push needs a mobile app with device tokens. In-app and SMS cover every notification today."],
+      ["Real people, vehicles, devices", "AMBER", "None yet on staging — the software to receive them (registration, verification, onboarding, units, trackers) is complete."],
+      ["Deployment", "GREEN", "Live at trustride-services.vercel.app, connected to staging. Before commercial use: Vercel Pro and the Supabase sign-in URLs (section X)."],
+    ] } },
+    { callout: "Status: implementation-complete in software, with every remaining item classified in section Z. Nothing left is unfinished code; what remains is credentials, provider access, real resources, configuration and five Founder confirmations." },
+
+    // ------------------------------------------------------------------ A
+    { h1: "A. What was already established" },
+    { bullets: [
+      "All 11 engines installed; 31 signal routes complete; Engine 11 v3.0.0 with three main shells (Office, Business, Marketplace) and nine sub-shells; System Access as the first record of every visit.",
+      "24 active services across five families, Kisumu zones and rate cards; the order chain from placement to receipt worked when a driver existed.",
+      "Six actor-request types with your operating calendar (2 working-day target, 3-day deadline, escalation not auto-decline).",
+      "Row-level security on every table; anonymous visitors could only record System Access.",
+    ] },
+
+    // ------------------------------------------------------------------ B
+    { h1: "B. What was missing" },
+    { table: { head: ["#", "Gap (from the 1 October check)", "Now"], rows: [
+      ["G1", "Signed-in users could not read 119 tables — screens failed", "DONE"],
+      ["G2", "No way to turn approved operators, vehicles and bases into a dispatchable pool", "DONE"],
+      ["G3", "No Operator App — jobs could never complete", "DONE"],
+      ["G4", "No-resource orders sat forever; customer never told", "DONE"],
+      ["G5", "Executive Assistant orders failed at pricing and held the worker", "DONE"],
+      ["G6", "Marketplace and two EA intake services could never be fulfilled", "DONE"],
+      ["G7", "Multi-stop orders silently dropped every stop after the first", "DONE"],
+      ["G8", "Accept-quotation always failed; fare fixed without the customer", "DONE"],
+      ["G9", "11 of 12 background jobs never ran; system reported itself offline", "DONE"],
+      ["G10", "No real M-Pesa path (no verified phone, no callback)", "DONE"],
+      ["G11", "No scheduled orders", "DONE"],
+      ["G12", "Customer told nothing between “placed” and “settled”", "DONE"],
+      ["G13", "Customer tracking wrote a location instead of showing one", "DONE"],
+      ["G14", "Order form booked one service and asked for distance by hand", "DONE"],
+      ["G15", "Worker matching ignored vetting", "DONE"],
+      ["G16", "Approved actors had nothing to do after approval", "DONE"],
+      ["G17", "Only individuals could register", "DONE"],
+      ["G18", "No support centre; reviews could not be submitted", "DONE"],
+      ["G19", "No Executive Dashboard screen; advisory output had no recipient", "DONE"],
+      ["G20", "Screens read engine tables directly", "DONE"],
+    ] } },
+
+    // ------------------------------------------------------------------ C
+    { h1: "C. What was implemented" },
+    { bullets: [
+      "Permissions (G1): signed-in reads granted only where a row policy already decides who sees what; 98 over-broad policies narrowed to the Office; a standing conformance check runs inside every migration and nightly.",
+      "Identity and contact (D3, G10, G17): one verified phone per identity (codes hashed, never stored), preferences and quiet hours; companies, cooperatives, NGOs and government bodies register and are verified with BRS/KRA; representatives act for them; external systems get scoped, hashed keys; vehicles and devices register as objects with NTSA checks.",
+      "Engine 6 integration gateway: one outbound queue with retries and dead-ends that are explicit (waiting for configuration, failed); simulator/sandbox/production switch per port; money is never auto-retried. Edge functions: integration-gateway (Africa's Talking SMS, Meta WhatsApp, Daraja STK and B2C), mpesa-callback, protrack-ingest (push and poll).",
+      "Resources (G2): bases, vehicles (NTSA-verified), devices, onboarding approved operators into working units, credentials and vetting, maintenance, dissolution, tracker binding — all from the Office screens.",
+      "Order lifecycle (G4–G8, G11, G14, G15): estimate → customer accepts → dispatch (D2); waiting with retries and a 30-minute limit; scheduled orders; up to 5 priced stops; vetting and certificates enforced in matching; operator acknowledgement with timeout and reassignment; every outcome explicit (cancelled, expired, failed, completed, settled, reviewed).",
+      "Payments (G10): M-Pesa STK to the verified phone, callback and timeout handling, retry by the customer, bank transfer above the M-Pesa limit recorded by the Office, vendor payouts by B2C at 95%.",
+      "Marketplace (G6, G16): vendor approval, listings, own-stock pipeline (acquired → inspected → valued → refurbished → compliant → listed → sold), reservation confirmed by the Office, payment, handover, payout — never routed to driver dispatch.",
+      "Telemetry (G13): Protrack points enter only through Engine 6 with a system key; TrustRide gives them meaning (which vehicle, which trip); customers see only their own active trip; the Office sees all; stale trackers and out-of-area movement raise alerts.",
+      "Support and reviews (G18): cases with SLA by severity, internal notes, assignment, resolution; one review per completed order.",
+      "Background jobs (G9): 18 jobs scheduled and measured from the scheduler's own run log; platform health derived from them.",
+      "Lawful projections (G20): 29 registered read models; every screen reads only through them.",
+      "Frontend: 35 routes — Sovereign Gate, Customer App, Partner, Governor, Intermediary, Marketplace and Vendor, Operator App, Admin Console (overview, requests, orders, resources, tracking, marketplace, support, users, integrations, health) and Executive Dashboard.",
+    ] },
+
+    // ------------------------------------------------------------------ D
+    { h1: "D. Files, migrations, functions, commands and screens" },
+    { table: { head: ["Item", "Detail"], rows: [
+      ["Migrations", "20261007000001 … 20261007000021 (21 files), all applied on trustride-stagging; 50 migrations in total"],
+      ["Edge functions", "integration-gateway, mpesa-callback, protrack-ingest (deployed to staging)"],
+      ["Database", "273 tables (0 without row security) · 414 functions · 48 signal routes · 29 projections · 64 command verbs across 91 surface permissions"],
+      ["Frontend", "frontend/web — 35 routes, 11 shared components, one command path (Engine 11 capture) and one read path (registered projections)"],
+      ["Tests", "supabase/tests — 10 suites, 407 checks; browser journeys (Playwright) kept with this report's evidence"],
+      ["Commits", "eba78fd, 20c0381, cddfb45, 72ac76d, 10651e9, 66d4af0, e18a9bc, 73bfe18, 4fe1bb6, ad0543c, 4a34207, aa738b0"],
+    ] } },
+
+    // ------------------------------------------------------------------ E/F/G
+    { h1: "E. Database changes" },
+    { p: "New tables cover contact verification, system credentials, outbound integration requests, telemetry bindings and location events, support cases and messages, marketplace payouts, Governor data grants, referrals and quote lines. Existing tables gained the columns their journeys needed (order waiting/attempts/scheduling, job acknowledgement, payment attempt and receipt details). State vocabularies were extended (QUOTED, WAITING, SCHEDULED, EXPIRED, FAILED, AWAITING_PAYMENT; job ACKNOWLEDGED/FAILED; TIMED_OUT payments; new skills and certificates). The Sunday/holiday multiplier was retired (D1)." },
+    { h1: "F. Security and RLS changes" },
+    { bullets: [
+      "Row security on all 273 tables; signed-in read only where a policy decides rows; no table writable by signed-in or anonymous users; anonymous may call only the System Access functions.",
+      "Every migration ends by revoking default execute rights and asserting conformance — a migration that would open anything fails to apply.",
+      "Migration 18: the four deferred integrity checks now run with their owner's rights, so they judge every row regardless of who commits.",
+      "Migration 19: a representative may manage an organisation's contacts only if Foundation confirms the representation.",
+      "Office surfaces open only for Founder/Administrator/Executive/approved operators; Founder alone grants Executive and Administrator; suspension takes effect on the next request.",
+    ] },
+    { h1: "G. Signal and command changes" },
+    { p: "Commands are pluggable (one function per verb, registered per surface) and every one returns its outcome to the screen. New verbs cover onboarding, duty, acknowledgement/decline, cancellation, intervention, payments, marketplace, support, reviews, referrals, roles, suspension, adapters and external systems. New signals carry what used to be dropped: RESOURCE_UNAVAILABLE, ASSIGNMENT_RELEASED, FARE_QUOTED / FARE_CALCULATION_FAILED, QUOTE_EXPIRED, ORDER_PROGRESS (every step to the customer), FLEET/OBJECT_VERIFICATION_UPDATED, TELEMETRY_BATCH_NORMALIZED, RESOURCE_LOCATION_UPDATED, VENDOR_PAYOUT_*. A handler that fails is no longer swallowed: the signal is dead-lettered and the Office is alerted." },
+
+    // ------------------------------------------------------------------ H
+    { h1: "H. User journey results" },
+    { p: "Run through the real screens in a browser, from an empty database, in this order. Each step below was checked on screen, not inferred." },
+    { table: { head: ["Journey", "What was proven", "Result"], rows: [["A — Customer transport", "Register → identity and phone verified → book a boda (zones) → estimate → accept → matched operator notified → accepted → dispatched → en route → arrived → executing → completed → M-Pesa prompt → settled → receipt → review", "PASS"], ["B — Resource unavailable", "Order with nobody on duty → WAITING shown and SMS/in-app “finding you a boda” → operator starts shift → retry matches → fare quoted → completed (as A)", "PASS"], ["C — Operator", "Apply at Gate (refused before approval) → approved → onboarded → start shift → job offered → accept → each step → close → released and AVAILABLE; ack timeout reassigns", "PASS"], ["D — Admin", "Founder claim → approve each request type → base, vehicle (NTSA), tracker, units, credentials → monitor orders and tracking → cancel a stuck order with reason → resolve support", "PASS"], ["E — Marketplace", "Vendor applies → approved → lists → customer reserves → Office confirms viewing → M-Pesa → receipt → handover → vendor paid 95% by B2C; never dispatched", "PASS"], ["F — Executive Assistant", "Ineligible request (no safeguarding certificate) waits and is cancelled → errands: skill + vetting + hours → matched → priced hourly → executed → paid", "PASS"], ["G — Tracking", "Office registers Protrack, issues key, fits tracker → telemetry accepted (wrong key refused) → customer sees own active trip → Office sees device and job → tracking ends at completion", "PASS"], ["H — Governance", "Governor applies → approved → sees nothing → scope granted → sees only that aggregate → scope withdrawn → nothing again; every step audited", "PASS"], ["Organisations", "Company registered and verified (BRS/KRA simulator) → Customer account opened at the Gate → representative acts as it → gives it its own verified phone → books in its name → follows the live trip → the M-Pesa prompt goes to the company's phone → paid and receipted in the company's name → switches back", "PASS"], ["Partner & Intermediary", "Partner contributes a motorcycle → approved → partner-contributed fleet vehicle; Intermediary approved → referral code → customer applies it → referral recorded", "PASS"], ["Staff roles", "Founder grants Executive and Administrator → each limited to their surfaces → Administrator cannot grant Executive/Founder → suspension refuses everywhere → reinstated → revoked Executive loses the dashboard", "PASS"], ["Unauthorized", "Office pages refused to customer/Governor/operator; other people's orders and jobs reveal nothing; Data API refuses writes, other people's rows and Office shells; anonymous reads nothing", "PASS"]] } },
+
+    // ------------------------------------------------------------------ I–O
+    { h1: "I. Service-by-service results" },
+    { table: { head: ["Family", "Services", "How fulfilled", "Proven"], widths: [1.1, 0.7, 2.6, 1.6], rows: [
+      ["Transport", "3", "Dispatch: estimate → accept → operator → tracked trip → M-Pesa", "Boda ride end to end in the browser; all classes priced in SQL suite 04"],
+      ["Delivery", "2", "Dispatch (van/pickup), multi-stop priced per stop", "SQL suite 04 incl. bulk cargo pricing"],
+      ["Courier", "2", "Dispatch (boda), parcel and document rates", "SQL suite 04"],
+      ["Executive Assistant", "11", "9 by dispatch with skill, certificate and vetting rules, hourly pricing, day-shift window; Academy and Employment by intake to the Office", "Errands end to end in the browser; school visitation correctly refused to an EA without a safeguarding certificate"],
+      ["Marketplace", "6", "Listings, reservation, Office-confirmed viewing, payment, handover, payout — never dispatch", "Motorcycle sale end to end in the browser"],
+    ] } },
+    { h1: "J. Resource management results" },
+    { p: "From the Office screens: a base was added; a motorcycle and a Protrack device registered; the motorcycle passed the NTSA check through Engine 6 and was added to the fleet; the tracker was fitted; an approved rider was formed into a Boda unit with that motorcycle and an approved assistant into an Executive Assistant unit with three credentials; a partner's own motorcycle arrived as a partner-contributed fleet vehicle. Maintenance, return to service, dissolution and credential revocation are proven in SQL suite 03." },
+    { h1: "K. Operator results" },
+    { p: "The operator applied for Office access at the Gate, was refused the Operator App until approved, was onboarded, started a shift, was notified of the job, accepted it, moved it through dispatched, en route, arrived, executing and completed, closed it, and was released back to available. An unacknowledged job timed out after 3 minutes and was taken back and reassigned (seen in the first browser run); declining is proven in SQL suite 04. An operator cannot open another operator's job." },
+    { h1: "L. Customer results" },
+    { p: "Registered with phone, verified identity and phone, booked from the catalogue (zones, not typed distances), saw “finding you a boda” while nobody was on duty, saw the fare, accepted it, followed the trip live, paid by M-Pesa prompt, received a receipt, left a review, opened a support case and saw the Office's reply and resolution, applied a referral code, bought a vehicle, registered her company, opened a Customer account for it, gave it its own verified phone and booked in its name." },
+    { h1: "M. Admin results" },
+    { p: "The Founder claimed authority once (refused to everyone afterwards), decided every request type, onboarded resources, cancelled a stuck order with a reason (customer told), handled support, granted and revoked roles, suspended and reinstated a user, granted a Governor scope, registered Protrack and issued it a key shown once, switched adapters, and read health, tracking and the Executive Dashboard. A separate Administrator (not the Founder) and Executive were proven against their boundaries — see V." },
+    { h1: "N. Marketplace results" },
+    { p: "Vendor applied and was approved; listed a Honda Ace 125 for KES 95,000; the customer reserved it; the Office confirmed the viewing; the customer paid by M-Pesa and was receipted; the vendor confirmed handover; the vendor was paid KES 90,250 (95%) by B2C; the order never touched dispatch or tracking. TrustRide's own stock pipeline (acquire → … → compliant → listed) is on the Office Marketplace screen and proven in SQL suite 06." },
+    { h1: "O. Executive Assistant results" },
+    { p: "Eligibility is enforced by skill, certificate, vetting tier and the 06:00–19:00 day-shift window. An assistant without a child-safeguarding certificate was not matched to school visitation (the order waited and was cancelled); the same assistant was matched to errands, priced by the hour (KES 334.32 for 3 hours), carried it out and was paid." },
+
+    // ------------------------------------------------------------------ P–U
+    { h1: "P. Payment results" },
+    { bullets: [
+      "Customer M-Pesa (STK) to the verified phone, settlement, receipt — proven in the browser for a ride, an assistant and a vehicle purchase.",
+      "Declined prompt, timeout, retry by the customer, attempt limits, duplicate-callback safety, bank transfer above KES 250,000 — SQL suite 05.",
+      "Vendor payout by B2C (95%) — proven in the browser. Money operations are never re-sent automatically; the Office is told and retries by hand.",
+      "All of this ran on the payment simulator. The Daraja adapter is written; it needs Safaricom credentials (section Z).",
+    ] },
+    { h1: "Q. Notification results" },
+    { p: "Every state change reaches the person's inbox on the right surface and, by their preferences and quiet hours, by SMS or WhatsApp through Engine 6 (simulator on staging — codes and messages were read from the simulator log on screen). Proven in the browser: verification codes, request decisions, waiting, fare ready, fare confirmed, operator steps, payment, cancellation by the Office, job offers to operators, sale and payout to the vendor. Email and push are explicitly reported as not configured rather than silently dropped." },
+    { h1: "R. Protrack integration readiness" },
+    { bullets: [
+      "Push: Protrack posts to protrack-ingest with a TrustRide-issued key (Bearer); poll: every 30 seconds through the Protrack Open API for bound devices.",
+      "Proven in the browser run: the Office registered “Protrack GPS”, issued a telemetry key (shown once, stored only as a hash), fitted tracker PT-0001 to KMFA123B; a batch of 3 points was accepted; the customer saw the live position on their active trip and the Office saw device and job; tracking stopped when the trip completed; a wrong key was refused.",
+      "Needed to go live: Protrack account credentials (poll) and Protrack configured to push to our endpoint, plus real devices fitted (section Z).",
+    ] },
+    { h1: "S. Background job results" },
+    { p: "18 jobs active on staging: dispatch cycle (10 s), telemetry poll (30 s), dispatch sweep, quote expiry, payment timeout, outbound retry, capacity snapshot and consensus timeout (each minute), telemetry health (2 min), engine health, marketplace, support and orchestration SLA sweeps (5 min), actor-request SLA (15 min), advisory hourly and daily, conformance watch and log trim (daily). The Health screen reads their real run history; failures surface as alerts." },
+    { h1: "T. Projection results" },
+    { p: "29 registered projections, each tied to the surfaces allowed to render it; unregistered or wrong-surface reads are refused (SQL suite 09, 52 checks). The customer's order shows the operator only after the fare is accepted and the position only while the trip is active." },
+    { h1: "U. Failure and recovery results" },
+    { table: { head: ["Failure", "What happens", "Proven"], rows: [
+      ["No resource free", "Order waits, customer told, retried every minute up to 30 minutes, then expires with a reason", "Browser + suite 04"],
+      ["Operator does not acknowledge", "Taken back after 3 minutes and reassigned; customer told", "Browser + suite 04"],
+      ["Customer does not accept the fare", "Quote expires after 10 minutes; resources released", "Suite 04"],
+      ["Office cancels a stuck order", "Cancelled with reason, resources released, customer and operator told", "Browser"],
+      ["Payment declined / timed out", "Recorded with reason; customer can retry; limits enforced", "Suite 05"],
+      ["Provider down or not configured", "Request waits as “waiting configuration” or retries; money never auto-retried", "Suite 08 + live gateway round trip"],
+      ["Handler error inside the engines", "Signal dead-lettered, Office alerted — never silently lost", "Suite 08"],
+      ["Tracker silent / out of area", "Flagged stale; safety alert to the Office", "Suite 07"],
+    ] } },
+
+    // ------------------------------------------------------------------ V/W
+    { h1: "V. Security results" },
+    { bullets: [
+      "Browser: customer and Governor refused at every Office page; operators refused before approval and at the Admin Console; an Executive cannot manage users or decide requests; an Administrator cannot grant Executive or Founder; a suspended user is refused everywhere until reinstated; another person's order or job URL reveals nothing.",
+      "Data API directly, as a signed-in customer: reads only her own orders and only herself plus the company she represents; cannot write any table; cannot open the Admin Console. Anonymous: reads nothing.",
+      "Governor: sees no data until a scope is granted, then only that aggregate (completed services by family) — never people (D4).",
+      "System keys: hashed, scoped (telemetry only), revocable; a wrong key is refused.",
+      "Conformance check on staging: 0 violations.",
+    ] },
+    { h1: "W. Test results" },
+    { table: { head: ["Suite", "Checks", "Result"], rows: [
+      ["01 Permissions", "34", "PASS"], ["02 Identity, contacts, notifications", "52", "PASS"], ["03 Resources", "39", "PASS"],
+      ["04 Order lifecycle", "84", "PASS"], ["05 Payments", "25", "PASS"], ["06 Marketplace and actors", "56", "PASS"],
+      ["07 Telemetry, support, reviews", "29", "PASS"], ["08 Background jobs and health", "26", "PASS"], ["09 Projections", "52", "PASS"],
+      ["10 Commit-time integrity (new)", "10", "PASS"],
+      ["Browser journeys", "194 (135 clean + 59 follow-up)", "PASS"],
+    ] } },
+    { p: "Frontend: production build of all 35 routes, TypeScript and lint clean (one advisory font warning)." },
+
+    // ------------------------------------------------------------------ Matrix
+    { h1: "Final acceptance matrix" },
+    { p: "Every applicable cell was proven through the screens in the clean browser run, except the cells marked in the notes below the table, which are proven by the SQL suites on staging. N/A means the criterion does not apply to that actor. External-provider legs (M-Pesa, SMS, NTSA, IPRS, BRS/KRA, Protrack) ran on their simulators." },
+    { table: { head: ["Actor", "Reg", "AuthN", "AuthZ", "Surface", "Action", "Notify", "Resource", "Pay", "Track", "Support", "Audit", "Failure", "Done"],
+      widths: [1.6, 0.62, 0.62, 0.62, 0.62, 0.62, 0.62, 0.62, 0.62, 0.62, 0.62, 0.62, 0.62, 0.62], rows: [["Customer", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS"], ["Operator", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "N/A", "PASS", "PASS", "PASS", "PASS", "PASS"], ["Admin", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS"], ["Executive", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "N/A", "N/A", "N/A", "N/A", "PASS", "PASS", "PASS"], ["Vendor", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "N/A", "PASS", "PASS", "PASS", "PASS"], ["Partner", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "N/A", "N/A", "PASS", "PASS", "PASS", "PASS"], ["Intermediary", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "N/A", "N/A", "N/A", "PASS", "PASS", "PASS", "PASS"], ["Governor", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "N/A", "N/A", "N/A", "PASS", "PASS", "PASS", "PASS"], ["Company / entity", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS"], ["Device / resource", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "PASS", "N/A", "PASS", "N/A", "PASS", "PASS", "PASS"]] } },
+    { bullets: [
+      "Cells proven by the SQL suites on staging rather than the browser: the Audit column for every actor (each command is recorded with who, which surface and the outcome, and chained into the tamper-evident decision log); Device/resource Notification and Failure (stale tracker and out-of-area alerts, suite 07); Operator Failure for an explicit decline (suite 04 — the acknowledgement timeout was also seen in the browser).",
+      "Partner and Intermediary payments are N/A in this release: partners are paid under their agreements outside the app; intermediary commission terms are set per engagement.",
+      "Governor tracking is N/A by design (D4: aggregates only).",
+    ] },
+
+    // ------------------------------------------------------------------ X/Y/Z
+    { h1: "X. Remaining external dependencies" },
+    { table: { head: ["Item", "Classification", "What is needed"], widths: [1.6, 1.4, 3.0], rows: [
+      ["M-Pesa Daraja (STK, B2C)", "PRODUCTION CREDENTIAL REQUIRED", "Safaricom go-live (consumer key/secret, shortcode, passkey, B2C initiator); sandbox credentials first. Then switch PAYMENT_GATEWAY to SANDBOX/PRODUCTION on the Integrations screen."],
+      ["SMS (Africa's Talking)", "PRODUCTION CREDENTIAL REQUIRED", "Account username, API key and an approved sender ID."],
+      ["WhatsApp (Meta Cloud API)", "PRODUCTION CREDENTIAL REQUIRED", "Business account, phone number ID, token, approved templates."],
+      ["Protrack", "PRODUCTION CREDENTIAL REQUIRED", "Protrack account and API credentials for polling; Protrack set to push to protrack-ingest with the key issued from the Office."],
+      ["IPRS (national ID), BRS/KRA (companies), NTSA (vehicles)", "EXTERNAL PROVIDER DEPENDENCY", "Government API access agreements; adapters stay on simulator until granted."],
+      ["Google Maps / routing", "PRODUCTION CREDENTIAL REQUIRED", "API key; distances use the zone model until then."],
+      ["Vercel deployment", "DONE", "Re-linked from a previous Vercel account (now deleted) to the TrustRide account (team trust-ride, project trustride-services); Supabase variables set; live at https://trustride-services.vercel.app against staging."],
+      ["Vercel plan", "CONFIGURATION REMAINING", "The TrustRide team is on Hobby, which is for non-commercial use; move to Pro before TrustRide operates commercially. Optionally connect the GitHub repository for automatic deployments."],
+      ["Supabase Auth URLs (staging)", "CONFIGURATION REMAINING", "Set Site URL and redirect URLs to https://trustride-services.vercel.app in the Supabase dashboard (Authentication → URL Configuration) so confirmation and reset links open the live site."],
+      ["Gateway URL and callback secrets on staging", "DONE", "Already set (vault + function secrets)."],
+    ] } },
+    { h1: "Y. Remaining Founder decisions" },
+    { table: { head: ["Item", "Classification", "Question"], widths: [1.5, 1.4, 3.1], rows: [
+      ["New pricing rows", "FOUNDER DECISION REQUIRED", "Confirm the rates added for courier parcel/document (boda), bulk cargo (van) and the three EA services that had none."],
+      ["Multi-stop pricing", "FOUNDER DECISION REQUIRED", "Each stop is priced on its own and the order total is the sum. Confirm, or set a different rule."],
+      ["Cancellation fee", "FOUNDER DECISION REQUIRED", "Cancellation is free today at every stage before work starts. Set a fee policy if wanted."],
+      ["EA safeguarding requirements", "FOUNDER DECISION REQUIRED", "School visitation and student pick-up require enhanced vetting plus a child-safeguarding certificate; caregiving requires first aid. Confirm the lists."],
+      ["Email provider", "FOUNDER DECISION REQUIRED", "Choose a provider (or confirm SMS/WhatsApp/in-app only)."],
+      ["Governor scopes (D4)", "DONE", "Four aggregate scopes, none by default — granted one by one by the Office. Change only if you want different scopes."],
+      ["Flutterwave", "DONE", "Not used — Daraja only, per your earlier directive."],
+    ] } },
+    { h1: "Z. Final implementation status" },
+    { table: { head: ["Remaining item", "Classification"], widths: [4.2, 1.8], rows: [
+      ["Push notifications to phones (needs the mobile app and device tokens)", "CODE REMAINING"],
+      ["Daraja, Africa's Talking, WhatsApp, Protrack, Maps credentials", "PRODUCTION CREDENTIAL REQUIRED"],
+      ["IPRS, BRS/KRA and NTSA API access", "EXTERNAL PROVIDER DEPENDENCY"],
+      ["Vercel Pro plan, Supabase Auth URLs for the live site, switching each port from simulator once its credentials arrive", "CONFIGURATION REMAINING"],
+      ["Real operators, vehicles, bases and Protrack devices onboarded through the Office", "REAL-WORLD RESOURCE REQUIRED"],
+      ["Pricing rows, multi-stop rule, cancellation fee, EA requirements, email provider", "FOUNDER DECISION REQUIRED"],
+    ] } },
+    { p: "Push notifications are the one item of software not built: they belong to the mobile app, which does not exist yet; until then every notification reaches people in-app and by SMS/WhatsApp. Everything else the software can know now is built and proven. What remains is the arrival of real credentials, provider access, people, vehicles and devices — and your five confirmations above." },
+    { h2: "How to reproduce the evidence" },
+    { bullets: [
+      "SQL suites: supabase/tests/run.sh linked (staging) — rollback-only, leave no data.",
+      "Browser journeys: start the local stack (supabase start), build the frontend against it, run the journey scripts in order (register, governance, transport, rest, follow-up, entity, partner/intermediary/security, staff roles). Local working hours and the EA shift window are opened to 24 h for night runs only on the local database.",
+    ] },
+  ],
+};

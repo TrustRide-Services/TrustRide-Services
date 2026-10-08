@@ -1,0 +1,6 @@
+{
+  "name": "trustride-e2e",
+  "private": true,
+  "description": "TrustRide browser journeys and the integrated Company -> Boda proof",
+  "dependencies": { "playwright": "^1", "docx": "^9" }
+}

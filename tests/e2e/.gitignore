@@ -1,0 +1,10 @@
+# Local-only: keys, saved logins, run results, screenshots
+local.env
+protrack.key
+state-*.json
+results*.json
+proof-*.json
+proof-setup.json
+*.log
+*.png
+node_modules/

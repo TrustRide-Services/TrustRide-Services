@@ -1,0 +1,22 @@
+const { BASE, browser, actor, step, press, writeResults } = require("./lib");
+const text = async (p) => (await p.locator("body").innerText()).replace(/\s+/g, " ");
+(async () => {
+  const b = await browser(); const cust = await actor(b, "customer"); const C = cust.page; const F = (await actor(b, "founder")).page;
+  await C.goto(`${BASE}/dashboard`);
+  const v = await C.locator('select[name="acting"] option', { hasText: "Akinyi Logistics" }).getAttribute("value");
+  await C.locator('select[name="acting"]').selectOption(v); await C.getByRole("button", { name: "Act as" }).click(); await C.waitForLoadState("networkidle"); await C.waitForTimeout(1000);
+  await C.goto(`${BASE}/dashboard/support`);
+  const f = C.locator("form", { has: C.getByRole("button", { name: "Send to TrustRide" }) });
+  await f.locator('input[name="subject"]').fill("Company invoice question");
+  await f.locator('textarea[name="body"]').fill("Can receipts show our KRA PIN?");
+  await press(C, "Send to TrustRide", f);
+  await F.goto(`${BASE}/office/support`);
+  const c = F.locator(".trs-card", { hasText: "Company invoice question" }).first();
+  step("Office: company case shows the company as requester", /Akinyi Logistics Ltd/.test(await c.innerText()));
+  const rf = c.locator("form", { has: F.getByRole("button", { name: "Send" }) });
+  await rf.locator('input[name="body"]').fill("Answer for the company"); await press(F, "Send", rf);
+  await C.goto(`${BASE}/dashboard/support`);
+  step("Company: support case opened by its representative and answered", /Answer for the company/.test(await text(C)));
+  await C.locator('select[name="acting"]').selectOption(""); await C.getByRole("button", { name: "Act as" }).click(); await C.waitForLoadState("networkidle");
+  await cust.save(); await b.close(); writeResults("results.json");
+})();
