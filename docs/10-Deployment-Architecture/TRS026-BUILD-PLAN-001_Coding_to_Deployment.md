@@ -27,7 +27,7 @@ Every choice below is selected because it directly serves a constitutional requi
 | **Signal transport (Engines 7/8)** | Postgres `LISTEN/NOTIFY` + a small dedicated worker process for queue leasing (`orch_signal_queue`, `orch_queue_lease`), backed by Postgres row-locking (`FOR UPDATE SKIP LOCKED`) for the lease mechanism | The specification's queue/lease/checkpoint tables are already the durable source of truth; Postgres-native locking gives exactly the "workers lease, never own" semantics §2.5 of Engine 7 requires, without introducing a second system of record (Kafka/RabbitMQ) that would violate "one sovereign system" (SAPC Part V.2). |
 | **Frontend** | React (web shells: Admin Console, Sovereign Executive Console, Marketplace Hub) + React Native (mobile shells: User Hub, Operator App) | Five shells, two form factors — a shared TypeScript type layer generated from the Postgres schema (via `supabase gen types typescript`) keeps all five in sync with the same 236-table ground truth. |
 | **Hosting** | Supabase (managed Postgres + Auth + Storage + Edge Functions); Vercel or similar for the web shells; standard app-store distribution for the two mobile shells | Minimizes infrastructure surface area TISC would otherwise have to separately constitute. |
-| **Payment/verification/messaging rails** | Exactly as TISC/Engine 6 name them: M-Pesa C2B STK Push (primary), Flutterwave (secondary), NTSA verification API, KRA eTIMS, SMS/WhatsApp/Push gateways | No substitution — these are constitutional business law (TBOC Article 43), not implementation choices. |
+| **Payment/verification/messaging rails** | Exactly as TISC/Engine 6 name them: M-Pesa C2B STK Push (Flutterwave removed by Founder ruling 2026-10-08 until the system grows), NTSA verification API, KRA eTIMS, SMS/WhatsApp/Push gateways | No substitution — these are constitutional business law (TBOC Article 43), not implementation choices. |
 
 ---
 
@@ -99,7 +99,7 @@ Implement Foundation's service-role functions: user registration, authentication
 Implement Engines 2 (Resources), 3 (Services), 4 (Business), 5 (Cost) **with a temporary direct-call shim standing in for Orchestration/Coordination** — i.e., one engine's Edge Function calls another's directly in this phase only, to unblock parallel development of business logic before the full Sovereign Processing Unit exists. **This shim must be explicitly flagged as temporary in code and removed before Phase 4.** Exit criterion: a full Order → Assignment → Quote flow works end-to-end via direct calls.
 
 ## Phase 3 — Integration (Weeks 8–11, parallel with Phase 2)
-Implement Engine 6 against sandbox credentials for M-Pesa, Flutterwave, NTSA, KRA eTIMS, and an SMS/WhatsApp provider. Exit criterion: a sandbox STK push completes and produces a `PAYMENT_SETTLED` signal.
+Implement Engine 6 against sandbox credentials for M-Pesa, NTSA, KRA eTIMS, and an SMS/WhatsApp provider. Exit criterion: a sandbox STK push completes and produces a `PAYMENT_SETTLED` signal.
 
 ## Phase 4 — The Sovereign Processing Unit (Weeks 10–15)
 Implement Engine 7 (queue, lease, retry, priority, audit, telemetry) and Engine 8 (admission, dependency, consensus, recovery, finality, intelligence) for real. **Remove the Phase 2 direct-call shim** and re-route every signal through the real outbox → queue → lease → dispatch → inbox → ACCEPT path. This is the highest-risk phase — budget the most review time here, and do not proceed to Phase 5 until the full signal envelope conformance tests (Part V below) pass on every engine pair.

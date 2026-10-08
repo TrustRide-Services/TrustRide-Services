@@ -55,8 +55,8 @@ expansion, each gated on the prior stage's real operational data). Version 1.1.0
 environments and repository above.
 
 **`TRS026-VTDR-001_v2.0.0_Vendor_Technology_Decision_Record`** (adopted 2026-08-20, ADR 0002)
-— the vendor/technology baseline for every external integration: M-Pesa Daraja 2.0 +
-Flutterwave (payments), Google Maps + ODPC geospatial anonymization (mapping/privacy),
+— the vendor/technology baseline for every external integration: M-Pesa Daraja 2.0
+(payments; Flutterwave removed by Founder ruling 2026-10-08 until the system grows), Google Maps + ODPC geospatial anonymization (mapping/privacy),
 Africa's Talking + Twilio (messaging/voice masking), KRA eTIMS VSCU (tax invoicing), plus the
 zero-trust/DR/pen-testing infrastructure security baseline.
 
@@ -71,6 +71,6 @@ Operational procedures (deploy, rollback, secrets, incidents, backup) are in
 ## Status
 
 **Live on staging, 2026-10-08.** All eleven engines deployed to `trustride-stagging`
-(migrations through `20261007000023`); 11 SQL suites / 416 checks passing; Founder's Final
+(migrations through `20261008000025`); 12 SQL suites / 452 checks passing; Founder's Final
 Integrated Proof (Company → Boda) PROVEN 44/44. Every integration port runs in `SIMULATOR`
 mode until provider credentials are supplied. VTDR adopted as law 2026-08-20 (ADR 0002).
