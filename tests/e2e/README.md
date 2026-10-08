@@ -5,8 +5,8 @@ Real-browser journeys (Playwright) that drive the real screens as each actor, ag
 rollback-only SQL suites in `supabase/tests`, which never reach COMMIT.
 
 ## Run
-1. `supabase start -x studio,logflare,vector,imgproxy,storage-api,realtime,edge-runtime,postgres-meta,supavisor,mailpit`
-   (from the repo root; default ports 54321/54322).
+1. `supabase start -x studio,logflare,vector,imgproxy,storage-api,realtime,edge-runtime,postgres-meta,supavisor`
+   (from the repo root; default ports 54321/54322; mailpit on 54324 catches Auth emails for j14).
 2. `supabase status -o env | grep -E "^(API_URL|ANON_KEY|SERVICE_ROLE_KEY|DB_URL)=" > tests/e2e/local.env` (never commit it).
 3. Night runs only: open the working windows on the LOCAL database —
    `UPDATE trustride.platform_configuration SET config_value='00:00-23:59' WHERE config_key IN ('WORKING_WINDOW_WEEKDAY','WORKING_WINDOW_SATURDAY','WORKING_WINDOW_SUNDAY','EA_DAY_SHIFT_WINDOW');`
@@ -19,6 +19,7 @@ rollback-only SQL suites in `supabase/tests`, which never reach COMMIT.
 `j7_partner_intermediary_security` → `j8_staff_roles` → `j9_governor_revoke` →
 `j10_company_ride_and_support` → `j11_company_pay` → `j12_company_support`.
 `j13_operator_founder_claim` is self-contained (sets the local Founder aside for the run and restores it).
+`j14_password_reset` reads the reset email from mailpit and restores the test password afterwards.
 
 Integrated proof (Founder's Final Integrated Proof Mandate): `p0_setup.js`, then `proof.js <run-name>`
 (writes `proof-<run-name>.json`). Last result: 44/44 PASS on TRS026-ORDER-000000023.

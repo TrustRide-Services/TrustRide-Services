@@ -26,7 +26,7 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(params.get("error"));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +37,11 @@ function LoginForm() {
     if (mode === "FORGOT_PASSWORD") {
       if (!email) return setError("Enter the email on your account.");
       setBusy(true);
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      // The emailed link comes back through /auth/callback, which signs the
+      // person in and opens /reset-password to choose the new password.
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      });
       setBusy(false);
       if (error) return setError(error.message);
       setNotice("If that email has an account, a reset link is on its way.");
