@@ -212,9 +212,18 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
               <section>
                 <ShellHeading name="TrustRide Office" kind="internal · TrustRide staff only" />
                 {isStaff ? (
-                  <div className="trs-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <p className="text-text-secondary text-sm">You hold TrustRide Office access{office.founder ? " as Founder" : ""}.</p>
-                    <Link href={office.admin || office.executive ? "/office" : "/office/operator"} className="trs-btn-primary rounded-lg px-5 py-2 text-sm font-semibold shrink-0 text-center">Enter TrustRide Office</Link>
+                  <div className="space-y-3">
+                    <div className="trs-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <p className="text-text-secondary text-sm">You hold TrustRide Office access{office.founder ? " as Founder" : ""}.</p>
+                      <Link href={office.admin || office.executive ? "/office" : "/office/operator"} className="trs-btn-primary rounded-lg px-5 py-2 text-sm font-semibold shrink-0 text-center">Enter TrustRide Office</Link>
+                    </div>
+                    {/* Operator access is not Founder authority: the genesis claim stays offered until a Founder exists. */}
+                    {!ctx.founder_exists && (
+                      <div className="trs-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <p className="text-text-secondary text-sm">No Founder has been established yet. The first verified identity may claim Founder authority — once, ever. Only do this if you are the Founder of TrustRide Services.</p>
+                        <form action={claimFounder}><button type="submit" className="trs-btn-primary rounded-lg px-5 py-2 text-sm font-semibold shrink-0">Claim Founder authority</button></form>
+                      </div>
+                    )}
                   </div>
                 ) : !ctx.founder_exists ? (
                   <div className="trs-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

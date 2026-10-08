@@ -18,6 +18,7 @@ rollback-only SQL suites in `supabase/tests`, which never reach COMMIT.
 `j1_register` → `j2_governance` → `j3_transport` → `j4_rest` → `j5_followup` → `j6_entity` →
 `j7_partner_intermediary_security` → `j8_staff_roles` → `j9_governor_revoke` →
 `j10_company_ride_and_support` → `j11_company_pay` → `j12_company_support`.
+`j13_operator_founder_claim` is self-contained (sets the local Founder aside for the run and restores it).
 
 Integrated proof (Founder's Final Integrated Proof Mandate): `p0_setup.js`, then `proof.js <run-name>`
 (writes `proof-<run-name>.json`). Last result: 44/44 PASS on TRS026-ORDER-000000023.
