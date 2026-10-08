@@ -52,6 +52,7 @@ BEGIN
   SELECT * INTO o FROM trustride.business_order WHERE order_id = ord;
   PERFORM pg_temp.t_check('rider comes on duty -> retry matches -> estimate issued (QUOTED)', o.status = 'QUOTED', o.status::text || ' ' || coalesce(o.status_reason, ''));
   PERFORM pg_temp.t_check('worker held RESERVED->ASSIGNED for the order', trustride.fn_resource_unit_availability(boda) = 'ASSIGNED');
+  PERFORM pg_temp.t_check('the waiting reason is cleared once a worker is matched', o.status_reason IS NULL AND o.waiting_since IS NULL, coalesce(o.status_reason, ''));
   PERFORM pg_temp.t_check('customer asked to confirm the fare (SMS-critical)', EXISTS (
     SELECT 1 FROM trustride.present_notification_inbox WHERE recipient_user_id = cust AND title LIKE 'Confirm your fare%' AND critical));
   SELECT quote_state::text, computed_total_fare_kes INTO q FROM trustride.fare_quote WHERE quote_id = o.quote_id;
