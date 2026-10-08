@@ -249,11 +249,10 @@ marketplace vendors and fleet operations, outputting monthly KRA compliance repo
 | Cloud Hosting & Infrastructure | AWS (eu-west-1 Region) | Local Cloud Cache (Nairobi/Kisumu Edge) | SOC 1/2/3, ISO 27001, AWS KMS Encryption | ODPC Cross-Border Data Transfer Framework |
 
 > **Reconciliation note:** this platform's actual provisioned infrastructure is Supabase
-> (`trustride-dev` / `trustride-production`, `eu-central-1`), per the Build Plan in this same
-> folder — not the AWS `eu-west-1` row above. The Build Plan's environment decision governs
-> hosting; this row is retained verbatim as the source record and superseded on that one point
-> only, consistent with how ADR 0001 already reconciled the Build Plan against this
-> repository's real infrastructure.
+> (`trustride-stagging` / `trustride-production`, `eu-central-1`) with the web application on
+> Vercel, per the Build Plan in this same folder — not the AWS `eu-west-1` row above. The Build
+> Plan's environment decision governs hosting; this row is retained verbatim as the source
+> record and superseded on that one point only.
 
 ## 7. Hardened Infrastructure Security & Resiliency Audit
 

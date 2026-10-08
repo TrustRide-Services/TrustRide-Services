@@ -2,53 +2,75 @@
 
 ## Purpose
 
-Defines the deployment architecture for this project, per the Engineering Office
-Project Repository Standard (`00-FOUNDATION/standards/PROJECT_REPOSITORY_STANDARD.md`).
+Defines the deployment architecture for TrustRide Services: where the code lives, which
+environments exist, how changes move from a workstation to the live site, and the
+vendor/technology baseline every external integration follows.
 
 ## Scope
 
-Infrastructure, environments, CI/CD, infrastructure as code, monitoring, logging, backup,
-disaster recovery, release strategy.
+Infrastructure, environments, CI/CD, monitoring, logging, backup, disaster recovery, release
+strategy.
+
+## Current setup (verified 2026-10-08)
+
+| Concern | Where it lives |
+| --- | --- |
+| **Source code** | GitHub `TrustRide-Services/TrustRide-Services`, branch `main`; local working copy `C:\Users\ALBERT\TrustRide-Services` |
+| **Database, Auth, Edge Functions** | Supabase project `trustride-stagging` (ref `fdkzewkogkujtwvonesn`, region `eu-central-1`), organisation "TRUSTRIDE SYSTEM" |
+| **Web application** | Vercel team `trust-ride`, project `trustride-services` (Next.js, root `frontend/web`), live at https://trustride-services.vercel.app against `trustride-stagging` |
+| **Production database** | Supabase project `trustride-production` — provisioned, **not yet wired or deployed to**; nothing is promoted there without explicit Founder authorization |
+| **Local development** | Full Supabase stack via `supabase start` (ports 54321/54322), built from `supabase/migrations` |
+
+**Repository structure (actual):**
+
+```
+TrustRide-Services/
+├── docs/              # the governed document hierarchy (this folder is 10-Deployment-Architecture)
+├── supabase/
+│   ├── migrations/    # the eleven engines, in order, as timestamped migrations
+│   ├── functions/     # Edge Functions: integration-gateway, mpesa-callback, protrack-ingest
+│   ├── tests/         # rollback-only SQL suites (run.sh local | linked)
+│   └── config.toml    # local stack config (never pushed with `supabase config push`)
+├── frontend/web/      # the Next.js web application (Office / Business / Marketplace shells)
+└── tests/e2e/         # Playwright browser journeys and the integrated proof
+```
+
+**How a change reaches the live site:**
+
+1. Develop and prove locally (`supabase start`, `supabase/tests/run.sh local`, browser journeys in
+   `tests/e2e`).
+2. Database: `supabase db push --linked --yes` to `trustride-stagging`, then
+   `supabase migration list --linked` and `supabase/tests/run.sh linked` (must be 0 failed).
+3. Edge Functions: `supabase functions deploy <slug> --project-ref fdkzewkogkujtwvonesn --no-verify-jwt`
+   (every function authenticates with its own secret or key, not a Supabase JWT).
+4. Web: commit and push to `main`; Vercel's GitHub integration builds `frontend/web` and
+   promotes it to production on https://trustride-services.vercel.app automatically.
 
 ## Contents
 
-**`TRS026-BUILD-PLAN-001_Coding_to_Deployment`** (md / docx / pdf) — the step-by-step coding-
-and-deployment plan, reconciled against this repository's actual, already-provisioned
-infrastructure (not a greenfield proposal):
-
-- **Environments:** two Supabase projects — `trustride-dev` and `trustride-production` (org
-  `omnex-ke`, `eu-central-1`) — already provisioned; no separate staging project (Supabase
-  free-tier project limit). `trustride-dev` carries both development and pre-production
-  verification duty.
-- **Repository structure:** this project's own `database/`, `backend/`, `frontend/`,
-  `shared/`, `infrastructure/`, `tech-stack/`, `ai/` folders, per
-  `00-FOUNDATION/standards/PROJECT_REPOSITORY_STANDARD.md` — not a new structure.
-- **Migration order:** Foundation first (92 tables), then Resources → Services → Business →
-  Cost → Integration → Orchestration → Coordination → Advisory → Modelling → Presentation.
-- **Backend build sequence:** six phases, Foundation services first, the Sovereign Processing
-  Unit (Orchestration + Coordination) as the highest-risk phase with a flagged temporary
-  direct-call shim for earlier parallel development, Advisory/Modelling last (lowest risk,
-  zero write access to any other engine).
-- **CI/CD:** the structural test suite (`09-Testing-Constitution/`) as a hard gate on every
-  PR; `trustride-dev` on merge to `main`; `trustride-production` on tagged release only, with
-  manual Founder/Governor approval.
-- **Rollout:** internal Kisumu pilot → closed pilot → soft launch → general availability →
-  geographic expansion, each gated on the prior stage's real operational data.
+**`TRS026-BUILD-PLAN-001_Coding_to_Deployment`** — the coding-and-deployment plan: technology
+stack, migration order, backend build sequence, testing strategy, CI/CD and rollout stages
+(internal Kisumu pilot → closed pilot → soft launch → general availability → geographic
+expansion, each gated on the prior stage's real operational data). Version 1.1.0 records the
+environments and repository above.
 
 **`TRS026-VTDR-001_v2.0.0_Vendor_Technology_Decision_Record`** (adopted 2026-08-20, ADR 0002)
 — the vendor/technology baseline for every external integration: M-Pesa Daraja 2.0 +
 Flutterwave (payments), Google Maps + ODPC geospatial anonymization (mapping/privacy),
 Africa's Talking + Twilio (messaging/voice masking), KRA eTIMS VSCU (tax invoicing), plus the
-zero-trust/DR/pen-testing infrastructure security baseline. Reconciled against this
-repository's actual Supabase infrastructure at the one point of divergence (see the
-document's own §6 note).
+zero-trust/DR/pen-testing infrastructure security baseline.
+
+Operational procedures (deploy, rollback, secrets, incidents, backup) are in
+`docs/11-Operations-Manual/RUNBOOKS.md`.
 
 ## Dependencies
 
 - `09-Testing-Constitution/` — no migration or deployment proceeds without passing the
-  structural suite and, ultimately, the full Conformance Certificate.
+  SQL suites and the affected browser journeys.
 
 ## Status
 
-**Populated — PROPOSED, 2026-08-16, pending Founder phase-gate approval to begin Phase 1.**
-VTDR adopted as law 2026-08-20 (ADR 0002).
+**Live on staging, 2026-10-08.** All eleven engines deployed to `trustride-stagging`
+(migrations through `20261007000023`); 11 SQL suites / 416 checks passing; Founder's Final
+Integrated Proof (Company → Boda) PROVEN 44/44. Every integration port runs in `SIMULATOR`
+mode until provider credentials are supplied. VTDR adopted as law 2026-08-20 (ADR 0002).

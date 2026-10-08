@@ -38,15 +38,16 @@ across 236 tables, restated as working rules rather than retrospective findings:
 ### Local development setup
 
 See `10-Deployment-Architecture/` Part III for the full step-by-step: `supabase start` for
-the local stack (already configured at this project's own `supabase/`), the two-project
-promotion path (`trustride-dev` → `trustride-production`), and the secrets discipline (never
-a raw credential in a tracked file).
+the local stack (configured at this repository's `supabase/`), the promotion path
+(local → `trustride-stagging` → `trustride-production`), and the secrets discipline (never
+a raw credential in a tracked file). Test commands are in `supabase/tests/run.sh` and
+`tests/e2e/README.md`.
 
 ### Project structure
 
-See `10-Deployment-Architecture/` Part II — this project's `database/`, `backend/`,
-`frontend/`, `shared/`, `infrastructure/`, `tech-stack/`, `ai/` folders, per
-`00-FOUNDATION/standards/PROJECT_REPOSITORY_STANDARD.md`.
+See `10-Deployment-Architecture/` Part II — `docs/`, `supabase/` (migrations, Edge
+Functions, SQL suites), `frontend/web/` (the Next.js application) and `tests/e2e/` (browser
+journeys).
 
 ### FAQ
 

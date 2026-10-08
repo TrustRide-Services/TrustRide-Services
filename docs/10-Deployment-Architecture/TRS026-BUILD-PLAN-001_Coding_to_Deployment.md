@@ -4,7 +4,7 @@
 | --- | --- |
 | Document Title | TrustRide Services — Coding & Deployment Plan: From Specification to Production |
 | Document Identifier | TRS026-BUILD-PLAN-001 |
-| Version | 1.0.0 |
+| Version | 1.1.0 (2026-10-08: Parts II, III and VII restated for the current TrustRide-Services repository and environments; engine sequencing, testing and rollout unchanged) |
 | Status | PROPOSED — Engineering Execution Plan, for Founder review and phase-gate approval |
 | Classification | Institutional Blueprint — Confidential |
 | Basis | Built entirely from the eleven adopted engine specifications and the Four-Sovereign Framework (TBOC/SAPC/TEES/TISC); introduces no new business rule — every technology and sequencing choice below serves an already-constituted requirement |
@@ -33,36 +33,33 @@ Every choice below is selected because it directly serves a constitutional requi
 
 # PART II — REPOSITORY STRUCTURE (THE MODULAR MONOLITH, IN CODE)
 
-**This is not a greenfield decision.** The repository already exists — `omnex-ke` (GitHub: `omnex-ke/omnex-ke`), specifically `enterprise-account/technologies-research/research-engineering-office/04-projects/TrustRide Services Platform/` — governed by the Engineering Office's own `PROJECT_REPOSITORY_STANDARD.md` (ADR 0001, revised by ADR 0002). That standard already mandates the canonical top-level shape:
+The repository is **`TrustRide-Services/TrustRide-Services`** on GitHub (branch `main`), worked locally at `C:\Users\ALBERT\TrustRide-Services`. Its shape:
 
 ```
-TrustRide Services Platform/
-├── docs/            # the twelve-document governed hierarchy this Build Plan itself lives in (docs/10-Deployment-Architecture/)
-├── database/        # schema, migrations, functions, procedures, triggers, views, enums, policies, seed data — see Part IV
-├── backend/         # APIs, services, business logic, auth, integrations, background jobs, event processing, validation, tests
-├── frontend/         # web, mobile, desktop, components, pages, themes, assets, UX — the five shells
-├── shared/           # DTOs, contracts, shared types, utilities, constants, validation
-├── infrastructure/   # Docker, CI/CD, GitHub workflows, Terraform, monitoring, deployment, logging, backup, DR
-├── tech-stack/       # the stack decisions this Part I records, split across the already-scaffolded *_STACK.md files
-├── ai/               # prompts, skills, agents, context, memory — AI engineering assets for this project
-└── supabase/         # already linked locally (config.toml, migrations/, .branches) — see Part III
+TrustRide-Services/
+├── docs/              # the governed document hierarchy this Build Plan itself lives in (docs/10-Deployment-Architecture/)
+├── supabase/
+│   ├── migrations/    # every engine's schema, functions, triggers, policies and seed data, in Part IV order
+│   ├── functions/     # Edge Functions — integration-gateway, mpesa-callback, protrack-ingest
+│   ├── tests/         # rollback-only SQL suites (Part VI.1–VI.3)
+│   └── config.toml    # local stack configuration
+├── frontend/web/      # the Next.js web application — Office, Business and Marketplace shells
+└── tests/e2e/         # Playwright browser journeys and the integrated proof (Part VI.5)
 ```
 
-**Engine boundary inside `backend/services/`:** since the constitutional modular-monolith principle (SAPC Part V.2) forbids a fragmented service constellation, the eleven engines are **subfolders of one deployable backend**, not eleven repositories or eleven Supabase projects — `backend/services/engine-01-foundation/` through `engine-11-presentation/`, each holding that engine's service-role functions, Edge Function handlers, and triggers. `backend/integrations/` is the **only** location permitted to import an external HTTP client library — the literal enforcement of TISC's "only Integration touches the outside world" law, checked by lint rule, not convention alone.
-
-No new top-level folder is proposed here — the Engineering Office CLAUDE.md is explicit that the workspace (and each project's shape within it) is a closed baseline; this plan populates the existing structure, it does not redesign it.
+**Engine boundary:** since the constitutional modular-monolith principle (SAPC Part V.2) forbids a fragmented service constellation, the eleven engines live in **one database and one migration history**, not eleven repositories or eleven Supabase projects — each engine's tables and functions carry its own prefix inside the `trustride` schema. `supabase/functions/integration-gateway` is the **only** component that holds external-provider credentials or calls a provider — the literal enforcement of TISC's "only Integration touches the outside world" law: the database queues work for it and it reports outcomes back.
 
 ---
 
 # PART III — ENVIRONMENT SETUP (STEP BY STEP)
 
-**Two Supabase projects, not three** — confirmed against the Supabase free-tier project limit, and already provisioned: `trustride-dev` and `trustride-production`, both under the `omnex-ke` organization, `eu-central-1`. There is no separate `trustride-staging` project. Staging-equivalent verification happens *inside* `trustride-dev` (a dedicated schema or a Supabase branch, promoted only after passing the full Part VI test suite) before anything reaches `trustride-production`. Revisit a third project only if/when the org upgrades off the free tier — not before.
+**Two Supabase projects plus the local stack**, both in the "TRUSTRIDE SYSTEM" organization, `eu-central-1`:
 
-1. **`trustride-dev`** — all Phase 1–6 implementation work, integration testing, and the pre-production verification pass all happen here. Never share its credentials with production.
-2. **`trustride-production`** — receives only migrations and Edge Functions that have already passed the full Part VI suite against `trustride-dev`. No direct hand-edits.
-3. **Local development**: `supabase start` (the CLI local stack) already exists at `TrustRide Services Platform/supabase/` — `config.toml`, `migrations/`, and `.branches/` are already present; extend `config.toml` with the platform's own extensions (`pgcrypto`, `postgis`) matching every engine's own §2.0 Extensions block, rather than reinitializing.
-4. **Secrets**: Supabase service-role key, M-Pesa/Flutterwave sandbox credentials, NTSA/KRA API credentials — stored in Supabase's own Vault and the CI/CD provider's secret store, never in a `.env` file committed to the repository. This is the literal implementation of Engine 6's `integration_credential_reference` law: even in development, no raw secret lives in a table or a tracked file.
-5. **Promotion discipline, two-project reality**: local → `trustride-dev` (every migration, every PR) → `trustride-production` (tagged release only, manual approval gate — see Part VII). No migration is ever written directly against `trustride-production`.
+1. **Local** — `supabase start` builds the full stack from `supabase/migrations` (ports 54321/54322). Every change is proven here first.
+2. **`trustride-stagging`** (ref `fdkzewkogkujtwvonesn`) — the linked project. Receives every migration (`supabase db push --linked --yes`) and every Edge Function once proven locally; the live web application at https://trustride-services.vercel.app (Vercel team `trust-ride`, project `trustride-services`) runs against it. All Phase 1–6 integration testing and pre-production verification happens here.
+3. **`trustride-production`** — provisioned, not yet wired. Receives only migrations and Edge Functions that have already passed the full Part VI suite on `trustride-stagging`, and only on explicit Founder authorization. No direct hand-edits.
+4. **Secrets**: provider credentials (M-Pesa, Africa's Talking, WhatsApp, Protrack, NTSA/KRA) live only as Edge Function secrets (`supabase secrets set`); the database holds only the gateway URL and shared secret, in Supabase Vault. Nothing secret lives in a table or a tracked file — the literal implementation of Engine 6's `integration_credential_reference` law. The Supabase anon key is public by design.
+5. **Promotion discipline**: local → `trustride-stagging` (every migration, every change) → `trustride-production` (release only, manual Founder approval — see Part VII). No migration is ever written directly against `trustride-production`.
 
 ---
 
@@ -143,9 +140,9 @@ At minimum: (a) Customer places a Transport order, is assigned a Boda Boda, rece
 
 # PART VII — CI/CD PIPELINE
 
-1. **On every pull request:** lint, structural test suite (Part VI.1), unit tests, migration dry-run against a fresh ephemeral Postgres instance.
-2. **On merge to `main`:** deploy migrations + Edge Functions to `trustride-dev`; run the full integration and end-to-end suites there — `trustride-dev` is carrying both development and pre-production verification duty, since only two Supabase projects exist (Part III).
-3. **On a tagged release:** deploy to `trustride-production`, gated by manual Founder/Governor approval — mirroring the Sovereign Executive Console's own "rule on exceptions" authority; no production deployment is fully automated end-to-end.
+1. **Before every commit:** the SQL suites (`supabase/tests/run.sh local`, then `run.sh linked` after the migration is pushed — 0 failed), the affected browser journeys in `tests/e2e`, the web build and lint (`npm run build`, `npm run lint` in `frontend/web`), and a secret scan of the diff.
+2. **On push to `main`:** Vercel's GitHub integration builds `frontend/web` and promotes it to https://trustride-services.vercel.app automatically. Migrations and Edge Functions are deployed to `trustride-stagging` from the CLI as part of step 1, never by the web build.
+3. **On a release:** deploy to `trustride-production`, gated by manual Founder/Governor approval — mirroring the Sovereign Executive Console's own "rule on exceptions" authority; no production deployment is fully automated end-to-end.
 4. **Rollback discipline:** every migration is additive-only in production (matches the platform-wide "correction is a new signal/row, never an edit of history" law) — a bad migration is fixed forward with a new migration, never rolled back destructively against live data.
 
 ---
