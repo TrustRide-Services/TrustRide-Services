@@ -101,14 +101,13 @@ BEGIN
     PERFORM pg_temp.t_admin();
     RETURN jsonb_build_object('status', 'SESSION_REFUSED', 'reason', SQLERRM);
   END;
+  -- Through the gateway the frontend uses (fn_present_command_execute).
   BEGIN
-    c := trustride.fn_present_capture_command(s, p_cmd, p_payload);
+    r := trustride.fn_present_command_execute(s, p_cmd, p_payload);
   EXCEPTION WHEN OTHERS THEN
     PERFORM pg_temp.t_admin();
     RETURN jsonb_build_object('status', 'CAPTURE_REFUSED', 'reason', SQLERRM);
   END;
-  SELECT jsonb_build_object('status', translation_status, 'reason', rejection_reason, 'signal', translated_signal_id, 'command_id', command_id)
-  INTO r FROM trustride.present_command_capture WHERE command_id = c;
   PERFORM pg_temp.t_admin();
   RETURN r;
 END;
