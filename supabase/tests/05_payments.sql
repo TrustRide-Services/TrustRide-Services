@@ -53,7 +53,7 @@ BEGIN
   v := trustride.fn_integration_mpesa_callback_ingest(jsonb_build_object('Body', jsonb_build_object('stkCallback', jsonb_build_object(
     'MerchantRequestID', 'm-1', 'CheckoutRequestID', 'ws_CO_TEST_0001', 'ResultCode', 0, 'ResultDesc', 'The service request is processed successfully.',
     'CallbackMetadata', jsonb_build_object('Item', jsonb_build_array(jsonb_build_object('Name', 'Amount', 'Value', ceil(t.amount_kes)),
-      jsonb_build_object('Name', 'MpesaReceiptNumber', 'Value', 'SGR7TEST01'), jsonb_build_object('Name', 'PhoneNumber', 'Value', 254700000000)))))));
+      jsonb_build_object('Name', 'MpesaReceiptNumber', 'Value', 'SGR7TEST01'), jsonb_build_object('Name', 'PhoneNumber', 'Value', (req.payload->>'msisdn')::bigint)))))));
   PERFORM pg_temp.t_check('Safaricom success callback settles the transaction', v = 'SETTLED', v);
   v := trustride.fn_integration_mpesa_callback_ingest(jsonb_build_object('Body', jsonb_build_object('stkCallback', jsonb_build_object(
     'CheckoutRequestID', 'ws_CO_TEST_0001', 'ResultCode', 0))));
