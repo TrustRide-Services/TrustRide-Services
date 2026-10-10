@@ -182,23 +182,41 @@ SELECT cron.alter_job(jobid, active := true)  FROM cron.job WHERE jobname = '<jo
 ```sql
 SELECT queue_status, count(*) FROM trustride.orch_signal_queue GROUP BY 1;
 SELECT * FROM trustride.orch_signal_queue WHERE queue_status = 'FAILED' ORDER BY queued_at DESC LIMIT 50;
+SELECT * FROM trustride.dead_letter_review ORDER BY created_at DESC LIMIT 50;
 ```
-A signal reaches `FAILED` only after Engine 7's retries are exhausted; read every attempt in
-`trustride.orch_retry_history` before deciding to reprocess or discard it. Signals long `LEASED`
-with no progress point to a stalled dispatch cycle — check `fn_platform_job_health()` for
+The dispatch cycle (every 10 seconds) hands each signal to its destination engine in the same
+transaction. The queue entry ends `COMPLETED` when the handler ran, or `FAILED` when it raised; a
+failed signal's inbox row is `DEAD_LETTER`, a `dead_letter_review` row is opened and the Office is
+notified. A signal with no active route ends `DEAD_LETTER` in its outbox (reason `NO_ROUTE`), with
+a review row and an Office notification — it is decided once, not on every cycle. There is no
+automatic retry and no lease: `orch_retry_schedule`, `orch_retry_history` and `LEASED` are unused.
+Reprocessing a dead letter is a deliberate Office decision after reading its reason. A queue entry
+long `DISPATCHED` points to a stalled dispatch cycle — check `fn_platform_job_health()` for
 `trustride_dispatch_cycle`.
 
 ## Incidents and security events
 
-`trustride.system_incident` and `trustride.security_event` are the systems of record; Office
-notifications (`PAYMENT_EXCEPTION`, `PLATFORM_EXCEPTION`) reach Founder and Administrators in the
-app. There is no external paging channel yet (no email/SMS/Slack provider is configured).
+There is no incident table in use: `trustride.system_incident` and `trustride.security_event`
+exist but no function writes them. What the system records:
+- **Office notifications** (`present_notification_inbox`, categories `PAYMENT_EXCEPTION`,
+  `PLATFORM_EXCEPTION`, `ORDER_EXCEPTION`, `SUPPORT`) reach Founder and Administrators in the app;
+  critical ones also go out by SMS once the SMS provider is live. There is no other paging channel.
+- **Dead letters** (`dead_letter_review`) — every failed or unroutable signal.
+- **The audit chains** — `audit_log` (every governed change, including contact, identifier,
+  credential, role, membership and Office-decision rows), `present_decision_log` (every command),
+  `orch_routing_audit` / `orch_execution_audit` (every signal), `resource_ledger_event`,
+  `advisory_decision_log`, `model_decision_log`. Each is append-only and hash-chained.
 ```sql
-SELECT * FROM trustride.system_incident ORDER BY started_at DESC LIMIT 20;
-SELECT * FROM trustride.security_event ORDER BY occurred_at DESC LIMIT 50;
+SELECT * FROM trustride.present_notification_inbox
+WHERE top_shell = 'TRUSTRIDE_OFFICE' AND category LIKE '%EXCEPTION' ORDER BY delivered_at DESC LIMIT 50;
+SELECT * FROM trustride.audit_log ORDER BY chain_seq DESC LIMIT 50;
+SELECT * FROM trustride.fn_platform_audit_chain_verify(TRUE);   -- every chain; first_break_seq must be NULL
+SELECT * FROM trustride.platform_audit_chain_seal ORDER BY chain_seq DESC LIMIT 8;  -- last daily seal
 ```
-Foundation's hash-chained `trustride.audit_log` is the authoritative record of every governed
-change — use it to reconstruct what happened before considering any recovery action.
+`trustride_audit_chain_seal` verifies every chain daily (00:15 UTC) and notifies the Office of any
+break. Use the audit log to reconstruct what happened before considering any recovery action.
+History written before 2026-10-11 is kept as found; its known breaks are recorded in
+`platform_audit_chain.legacy_detail`.
 
 ## Emergency actions
 
