@@ -60,6 +60,14 @@ async function register(b, key) {
     const a = await register(b, key);
     await a.ctx.close();
   }
+  // A registered identity that opens /register again is sent to the Gate (D18: read through the function layer).
+  if (!only || only === "customer") {
+    const c = await actor(b, "customer");
+    await c.page.goto(`${BASE}/register`);
+    await c.page.waitForURL(/\/verify/, { timeout: 15000 }).catch(() => {});
+    step("customer: opening /register again goes to the Gate", c.page.url().includes("/verify"), c.page.url());
+    await c.ctx.close();
+  }
   await b.close();
   writeResults("results.json");
 })();

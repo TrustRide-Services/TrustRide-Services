@@ -24,8 +24,9 @@ export default async function RegisterPage() {
     );
   }
 
-  const { data: profile } = await supabase.from("platform_users").select("user_id").maybeSingle();
-  if (profile) redirect("/verify");
+  // Already registered -> the Sovereign Gate. (Through the function layer, like every other read.)
+  const { data: status } = await supabase.rpc("fn_my_registration_status");
+  if (status) redirect("/verify");
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-6 py-16 relative">
