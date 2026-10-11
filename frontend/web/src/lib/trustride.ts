@@ -100,8 +100,8 @@ async function openSessionUncached(sub: SubShell): Promise<{ id: string } | { er
     p_user_id: acting,
     p_channel_type: "WEB",
     p_access_id: jar.get(ACCESS_COOKIE)?.value ?? null,
-  });
-  if (error) return { error: humanize(error.message) };
+  }).abortSignal(AbortSignal.timeout(RPC_TIMEOUT_MS));
+  if (error) return { error: timedOut(error.message) ? NO_ANSWER : humanize(error.message) };
   try {
     // Only Server Actions may set cookies; during a render this throws and
     // the middleware keeps the cookie fresh instead.
@@ -125,6 +125,17 @@ async function shellSession(sub: SubShell, fresh = false): Promise<{ id: string 
   return openSession(sub);
 }
 
+// ------------------------------------------------------ Bounded waits
+// Every gateway call ends within RPC_TIMEOUT_MS with an explicit outcome: a
+// stalled network or database never leaves a screen waiting forever.
+const RPC_TIMEOUT_MS = 20_000;
+const NO_ANSWER = "TrustRide did not answer within 20 seconds. Refresh to try again.";
+const NO_ANSWER_COMMAND =
+  "TrustRide did not answer within 20 seconds. Your action may still have been recorded -- refresh and check before trying again.";
+function timedOut(message: string): boolean {
+  return /TimeoutError|AbortError|aborted/i.test(message);
+}
+
 // ---------------------------------------------------------- Projections
 export async function project<T = Record<string, unknown>>(sub: SubShell, code: string, params: Record<string, unknown> = {}):
   Promise<{ data: T; error: null } | { data: null; error: string }> {
@@ -132,8 +143,10 @@ export async function project<T = Record<string, unknown>>(sub: SubShell, code: 
   for (const fresh of [false, true]) {
     const s = await shellSession(sub, fresh);
     if ("error" in s) return { data: null, error: s.error };
-    const { data, error } = await supabase.rpc("fn_present_projection", { p_session: s.id, p_code: code, p_params: params });
+    const { data, error } = await supabase.rpc("fn_present_projection", { p_session: s.id, p_code: code, p_params: params })
+      .abortSignal(AbortSignal.timeout(RPC_TIMEOUT_MS));
     if (!error) return { data: data as T, error: null };
+    if (timedOut(error.message)) return { data: null, error: NO_ANSWER };
     if (!fresh && error.message.includes("SESSION_INVALID")) continue;
     return { data: null, error: humanize(error.message) };
   }
@@ -148,8 +161,10 @@ export async function command(sub: SubShell, commandType: string, payload: Recor
   for (const fresh of [false, true]) {
     const s = await shellSession(sub, fresh);
     if ("error" in s) return { ok: false, error: s.error, signal: null, commandId: null };
-    const { data, error } = await supabase.rpc("fn_present_command_execute", { p_session: s.id, p_command_type: commandType, p_payload: payload });
+    const { data, error } = await supabase.rpc("fn_present_command_execute", { p_session: s.id, p_command_type: commandType, p_payload: payload })
+      .abortSignal(AbortSignal.timeout(RPC_TIMEOUT_MS));
     if (error) {
+      if (timedOut(error.message)) return { ok: false, error: NO_ANSWER_COMMAND, signal: null, commandId: null };
       if (!fresh && error.message.includes("SESSION_INVALID")) continue;
       return { ok: false, error: humanize(error.message), signal: null, commandId: null };
     }

@@ -7,14 +7,21 @@ type Res = {
   estates: { estate_id: string; code: string; name: string; type: string; jurisdiction: string }[];
   vehicles: { object_id: string; type: string; label: string; plate: string; status: string; custodian: string | null;
     fleet: { fleet_resource_id: string; class: string; lifecycle: string; ownership: string; inspection: string; insurance: string; bound_unit: string | null;
-      tracker: { device: string; status: string; last_seen_at: string | null } | null } | null }[];
+      tracker: { device: string; status: string; last_seen_at: string | null } | null;
+      open_maintenance: { maintenance_id: string; type: string; description: string; opened_at: string } | null } | null }[];
   devices: { object_id: string; serial: string; model: string; bound: boolean }[];
   units: { workforce_unit_id: string; operator: string; class: string; base: string; availability: string; plate: string | null;
     capabilities: { capability_id: string; type: string; ref: string; expires_at: string | null }[] }[];
   operators_awaiting_unit: { user_id: string; name: string }[];
   classes: { code: string; label: string; requires_fleet: boolean }[];
   capability_types: string[];
+  equipment: { equipment_id: string; type: string; code: string; description: string | null; base: string | null; lifecycle: string }[];
+  financial_assets: { financial_asset_id: string; code: string; type: string; ownership: string; principal_kes: number; balance_kes: number; compliance: string; base: string | null }[];
+  equipment_types: string[];
+  financial_asset_types: string[];
 };
+
+const words = (s: string) => s.toLowerCase().replaceAll("_", " ");
 
 const OBJ_CLASS: Record<string, string> = { MOTORCYCLE: "BODA_BODA", TUKTUK: "TUKTUK", CAR: "SEDAN", PICKUP: "PICKUP_TOWN", VAN: "VAN_CARGO", TRUCK: "TRUCK_LIGHT" };
 
@@ -22,7 +29,7 @@ const OBJ_CLASS: Record<string, string> = { MOTORCYCLE: "BODA_BODA", TUKTUK: "TU
 // real people, vehicles and devices into a dispatchable pool, with no table
 // edited by hand: bases, vehicles (NTSA-verified), onboarding approved
 // operators into working units, credentials and vetting, Protrack devices,
-// maintenance and retirement.
+// vehicle maintenance, equipment, financial assets and retirement.
 export default async function OfficeResources() {
   const ctx = await gateContext();
   if (!ctx) redirect("/login");
@@ -82,6 +89,37 @@ export default async function OfficeResources() {
             <Card>{r.estates.map((e) => <p key={e.estate_id} className="text-sm text-text-secondary">{e.name} · {e.code} · {e.type.toLowerCase().replace("_", " ")} · {e.jurisdiction}</p>)}
               {!r.estates.length && <Empty>No bases yet — add one first.</Empty>}</Card>
           </Section>
+          <Section title="4 · Register equipment">
+            <Card>
+              {!r.estates.length ? <Empty>Add a base first.</Empty> : (
+                <CommandForm sub="ADMIN_CONSOLE" command="REGISTER_EQUIPMENT" submit="Register equipment" success="Equipment registered.">
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className={labelClass}>Type<select name="equipment_type" className={inputClass}>{r.equipment_types.map((t) => <option key={t} value={t}>{words(t)}</option>)}</select></label>
+                    <label className={labelClass}>Item code<input name="item_code" required className={inputClass} /></label>
+                    <label className={labelClass}>Description<input name="description" className={inputClass} /></label>
+                    <label className={labelClass}>Base<select name="home_estate_id" className={inputClass}>{estateOptions}</select></label>
+                  </div>
+                </CommandForm>
+              )}
+              {r.equipment.map((q) => <p key={q.equipment_id} className="text-sm text-text-secondary">{q.code} · {words(q.type)}{q.description ? ` · ${q.description}` : ""} · {q.base ?? "—"} · {words(q.lifecycle)}</p>)}
+            </Card>
+          </Section>
+          <Section title="5 · Register a financial asset">
+            <Card>
+              {!r.estates.length ? <Empty>Add a base first.</Empty> : (
+                <CommandForm sub="ADMIN_CONSOLE" command="REGISTER_FINANCIAL_ASSET" submit="Register asset" success="Financial asset registered (awaiting compliance review).">
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className={labelClass}>Type<select name="asset_type" className={inputClass}>{r.financial_asset_types.map((t) => <option key={t} value={t}>{words(t)}</option>)}</select></label>
+                    <label className={labelClass}>Code<input name="asset_code" required className={inputClass} /></label>
+                    <label className={labelClass}>Amount (KES)<input name="principal_amount_kes:n" type="number" min="1" step="any" required className={inputClass} /></label>
+                    <label className={labelClass}>Ownership<select name="ownership_type" className={inputClass}><option value="OWNED">Owned</option><option value="LEASED">Leased</option><option value="PARTNER_CONTRIBUTED">Partner contributed</option></select></label>
+                    <label className={labelClass}>Base<select name="home_estate_id" className={inputClass}>{estateOptions}</select></label>
+                  </div>
+                </CommandForm>
+              )}
+              {r.financial_assets.map((a) => <p key={a.financial_asset_id} className="text-sm text-text-secondary">{a.code} · {words(a.type)} · KES {a.balance_kes.toLocaleString()} of {a.principal_kes.toLocaleString()} · {words(a.ownership)} · {a.base ?? "—"} · {words(a.compliance)}</p>)}
+            </Card>
+          </Section>
         </div>
       )}
 
@@ -94,7 +132,7 @@ export default async function OfficeResources() {
               <span className="flex gap-2"><Badge status={v.status} />{v.fleet && <Badge status={v.fleet.lifecycle} />}</span>
             </div>
             {v.fleet && <p className="text-xs text-text-muted">{v.fleet.class} · {v.fleet.ownership.toLowerCase().replace("_", " ")} · inspection {v.fleet.inspection.toLowerCase()} · insurance {v.fleet.insurance.toLowerCase()}
-              {v.fleet.bound_unit ? " · in a working unit" : ""}{v.fleet.tracker ? ` · tracker ${v.fleet.tracker.device} ${v.fleet.tracker.status.toLowerCase()} (${when(v.fleet.tracker.last_seen_at)})` : " · no tracker"}</p>}
+              {v.fleet.bound_unit ? " · in a working unit" : ""}{v.fleet.open_maintenance ? ` · in ${words(v.fleet.open_maintenance.type)} since ${when(v.fleet.open_maintenance.opened_at)} (${v.fleet.open_maintenance.description})` : ""}{v.fleet.tracker ? ` · tracker ${v.fleet.tracker.device} ${v.fleet.tracker.status.toLowerCase()} (${when(v.fleet.tracker.last_seen_at)})` : " · no tracker"}</p>}
             {admin && (
               <div className="flex flex-wrap gap-2 items-end">
                 {!v.fleet && OBJ_CLASS[v.type] && (
@@ -117,6 +155,18 @@ export default async function OfficeResources() {
                   </CommandForm>
                 )}
                 {v.fleet?.tracker && <CommandForm sub="ADMIN_CONSOLE" command="UNBIND_TELEMETRY_DEVICE" fixed={{ fleet_resource_id: v.fleet.fleet_resource_id }} submit="Remove tracker" variant="ghost" inline />}
+                {v.fleet && !v.fleet.open_maintenance && (
+                  <CommandForm sub="ADMIN_CONSOLE" command="OPEN_FLEET_MAINTENANCE" fixed={{ fleet_resource_id: v.fleet.fleet_resource_id }} submit="Open maintenance" variant="ghost" inline>
+                    <select name="maintenance_type" className={`${inputClass} w-40`}>{["ROUTINE_SERVICE", "INSPECTION", "REPAIR", "REFURBISHMENT"].map((t) => <option key={t} value={t}>{words(t)}</option>)}</select>
+                    <input name="description" required placeholder="What is being done" className={`${inputClass} w-48`} />
+                    <input name="cost_kes:n" type="number" min="0" step="any" placeholder="Cost (KES)" className={`${inputClass} w-28`} />
+                  </CommandForm>
+                )}
+                {v.fleet?.open_maintenance && (
+                  <CommandForm sub="ADMIN_CONSOLE" command="COMPLETE_FLEET_MAINTENANCE" fixed={{ maintenance_id: v.fleet.open_maintenance.maintenance_id }} submit="Complete maintenance" variant="ghost" inline>
+                    <input name="condition_after" required placeholder="Condition after" className={`${inputClass} w-48`} />
+                  </CommandForm>
+                )}
               </div>
             )}
           </Card>

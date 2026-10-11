@@ -19,10 +19,16 @@ rollback-only SQL suites in `supabase/tests`, which never reach COMMIT.
 `j7_partner_intermediary_security` → `j8_staff_roles` → `j9_governor_revoke` →
 `j10_company_ride_and_support` → `j11_company_pay` → `j12_company_support`.
 `j13_operator_founder_claim` is self-contained (sets the local Founder aside for the run and restores it).
-`j14_password_reset` reads the reset email from mailpit and restores the test password afterwards.
+`j14_password_reset` reads the reset email from mailpit and restores the test password afterwards; it ends the
+customer's saved session, so sign the customer in again (state-customer.json) before anything that acts as them.
+`j15_office_resources` (Office equipment, financial assets, vehicle maintenance) runs **after** the integrated proof:
+it sends KMFA123B through maintenance, after which the vehicle's ledger reason is the Office's, not
+`BOUND_TO_WORKFORCE_UNIT`, which the proof's integrity check expects verbatim.
+Known ordering effects in a fresh run: `j5`'s company-booking step precedes `j6`, where the company's phone is added
+(j6 then proves booking is enabled); `j11` needs a completed, unpaid company order left by `j10`.
 
 Integrated proof (Founder's Final Integrated Proof Mandate): `p0_setup.js`, then `proof.js <run-name>`
-(writes `proof-<run-name>.json`). Last result: 44/44 PASS on TRS026-ORDER-000000023.
+(writes `proof-<run-name>.json`). Last result: 44/44 PASS on TRS026-ORDER-000000023 (8 Oct); 43/44 on TRS026-ORDER-000000015 (11 Oct, remediation run with j15 run before the proof -- see above).
 
 ## Reports
 `report/build_completion.js <out-dir> <content.js>` writes md/html/docx; `pdf.js <html> <pdf> <png>` prints the PDF.
