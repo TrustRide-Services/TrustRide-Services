@@ -483,3 +483,51 @@ No flow called it.
   - the payroll model (who is paid what, and when) before pay runs, P10 and bank files are built.
 - **External prerequisites:** KRA eTIMS OSCU/VSCU onboarding, sandbox testing and certification against KRA's
   published specification.
+
+### WP7(f) Register, nine-level status and operating-company inventory
+
+**Migration 054.**
+- `integration_port_registry` gains `status_checkpoints`: each of the nine §4.8 checkpoints, with its evidence.
+- `status_level` is computed as the highest checkpoint reached with no gap below it.
+- A constraint forbids checkpoints 7–9 for a port without a built live adapter.
+
+**Levels.**
+
+| Level | Ports |
+|---|---|
+| 6 | Daraja, SMS, WhatsApp, Google email, MetaMap (switch locked) |
+| 5 | NTSA, eTIMS, EPRA |
+| 2 | Protrack (no telemetry simulator) |
+| 1 | Routing, push |
+| 0 | Maps, voice, USSD |
+
+No port is above 6: no credentials, and no live transaction.
+
+**Evidence.**
+- Suite 34 red on staging (no status; WhatsApp masking expectation corrected) → **10/10**. It includes the first
+  database-level WhatsApp workflow tests: simulator, live hand-off, failure, single delivery record and isolation.
+- **Staging full regression: 34 suites, 750/750, 0 failed.**
+- Engine 5 fingerprint after WP7: identical to the post-WP5 baseline (463 rows).
+
+**Documents.**
+- `docs/13-Integration-Register/INTEGRATION_REGISTER.md` rewritten to the current state.
+- `docs/13-Integration-Register/OPERATING_COMPANY_INTEGRATION_INVENTORY.md` is new: 15 categories, plus a register of
+  the justified integrations.
+
+### WP7 disposition
+
+| Part | Disposition |
+|---|---|
+| (a) MetaMap identity | Implemented and verified to level 6. Awaiting the Founder decision on the person onboarding rule; blocked by external dependency (MetaMap account) |
+| (b) NTSA VIN/chassis | Implemented and verified to level 5. Blocked by external dependency (NTSA access) |
+| (c) Google email | Implemented and verified to level 6. Blocked by external dependency (mailbox and credentials) |
+| (d) eTIMS | Implemented and verified to level 5. Awaiting legal determination |
+| (d) Payroll | Statutory calculation implemented and verified. Awaiting professional confirmation and the payroll model |
+| (e) Hardening | Implemented and verified: 5 defects fixed, including the money-loss path on ambiguous M-Pesa outcomes |
+| (f) Register and inventory | Implemented and verified |
+
+**Not done in WP7 (moved).**
+- **Telemetry simulator (Protrack level 3):** to WP9, lifecycle coverage.
+- **Office forms** for NTSA lookup, purchase invoices, payroll confirmation and EPRA: to WP8.
+
+**Migrations this WP:** 045–054, all on staging; the repository equals staging.
