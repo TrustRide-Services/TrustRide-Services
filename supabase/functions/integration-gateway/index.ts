@@ -15,14 +15,16 @@
 //   MPESA_TRANSACTION_TYPE (CustomerPayBillOnline | CustomerBuyGoodsOnline), MPESA_PARTY_B (till for BuyGoods),
 //   MPESA_CALLBACK_BASE_URL (the mpesa-callback function URL), MPESA_CALLBACK_TOKEN,
 //   MPESA_B2C_SHORTCODE, MPESA_B2C_INITIATOR_NAME, MPESA_B2C_SECURITY_CREDENTIAL
+//   METAMAP_CLIENT_ID, METAMAP_CLIENT_SECRET, METAMAP_WEBHOOK_URL, METAMAP_WEBHOOK_TOKEN   MetaMap GovChecks (see metamap.ts)
 // SANDBOX adapters use the providers' sandbox hosts; PRODUCTION the live hosts.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { metamapVerify } from "./metamap.ts";
 
 type OutboundRequest = {
   request_id: string;
   port_code: string;
-  operation: "NOTIFY_SMS" | "NOTIFY_WHATSAPP" | "NOTIFY_EMAIL" | "NOTIFY_PUSH" | "STK_PUSH" | "B2C_PAYOUT";
+  operation: "NOTIFY_SMS" | "NOTIFY_WHATSAPP" | "NOTIFY_EMAIL" | "NOTIFY_PUSH" | "STK_PUSH" | "B2C_PAYOUT" | "IDENTITY_VERIFY" | "ENTITY_VERIFY";
   adapter_type: "SANDBOX" | "PRODUCTION" | "SIMULATOR";
   payload: Record<string, unknown>;
   attempt: number;
@@ -176,6 +178,11 @@ async function handle(req: OutboundRequest): Promise<Outcome> {
       return { kind: "done", success: false, error: "EMAIL_PROVIDER_NOT_SELECTED (Founder decision pending)" };
     case "NOTIFY_PUSH":
       return { kind: "done", success: false, error: "PUSH_NOT_AVAILABLE (no device tokens are registered on the web surfaces)" };
+    case "IDENTITY_VERIFY":
+    case "ENTITY_VERIFY":
+      return metamapVerify({ ...req, operation: req.operation }, { fetch, env: (n) => Deno.env.get(n) });
+    default:
+      return { kind: "done", success: false, error: `OPERATION_NOT_SUPPORTED: ${String((req as { operation: unknown }).operation)}` };
   }
 }
 

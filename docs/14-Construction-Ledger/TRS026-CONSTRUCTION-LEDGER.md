@@ -252,3 +252,81 @@ routing log now carries the true provenance.
   1. approve the Engine 5 derivation correction (fuel type and jurisdiction per rate) and the fare impact before EPRA feeds pricing;
   2. choose the routing provider; its gateway adapter and account follow.
 - **Pending (WP8):** the Office screen form for recording an EPRA cycle. The command works today.
+
+## WP7 — Operating-company integrations (2026-10-12)
+
+### WP7(a) Identity and business verification through MetaMap (decision 2.6)
+
+**Facts verified (MetaMap GovChecks documentation).**
+- `ke/iprs` takes a document number, first name and last name. It returns names, gender and date of birth, or
+  `kenyanIprs.notFound`. It returns **no vital status and no KRA PIN**.
+- `ke/brs` takes a registration number. It returns the company name, type, status, KRA PIN and shareholders
+  (each with an identity number), or `kenyanBrs.notFound`.
+- Authentication: OAuth client credentials, with a bearer token of about one hour. A callback URL is optional.
+  No signature scheme is published for GovChecks callbacks, and no sandbox host is documented.
+- MetaMap has no NTSA, driving-licence or KRA PIN check for Kenya.
+
+**Migrations.**
+- **045 (vocabulary).**
+  - New identity outcomes: `RECORD_FOUND_STATUS_UNKNOWN`, `NOT_FOUND`, `PROVIDER_UNAVAILABLE`.
+  - New outbound operations: `IDENTITY_VERIFY`, `ENTITY_VERIFY`, `VEHICLE_LOOKUP`.
+- **046 (live path).**
+  - With the port off the simulator, a verification becomes one IPRS or BRS request to the gateway and
+    stays PENDING until the provider answers.
+  - The answer is mapped factually:
+
+    | Provider answer | Recorded as |
+    |---|---|
+    | Person found (IPRS) | `RECORD_FOUND_STATUS_UNKNOWN`, with no KRA PIN invented |
+    | Company registered/active (BRS) | `VALID`, with the KRA PIN BRS returns |
+    | notFound | `NOT_FOUND` |
+    | systemError, or retries exhausted | `PROVIDER_UNAVAILABLE` |
+
+  - Foundation's existing onboarding rules decide the outcome; they are unchanged.
+  - Each answer is applied once.
+  - Callbacks go to `fn_integration_metamap_webhook_ingest` (service role only).
+  - The simulator path is unchanged.
+- **047 (defects found by suite 29 on staging after 046, fixed forward).**
+  - Shareholder identity numbers were still kept, in the outbound request's stored answer and in the callback
+    log. Only the shareholder count is kept now (Data Protection Act s.25(c)).
+  - A callback arriving after TrustRide had given up was answered APPLIED. It is now `ALREADY_FINAL`.
+
+**Gateway (Edge Functions, deployed to staging).**
+- `integration-gateway/metamap.ts`: OAuth with token reuse and early renewal, then the documented IPRS and BRS
+  requests, with a 20 s timeout.
+  - A record or a notFound is a definitive answer.
+  - A timeout, a network failure, HTTP 5xx, systemError or an OAuth rejection is retried.
+  - SANDBOX refuses to run without a host supplied by MetaMap.
+- `index.ts`: routes the two operations and gains a default branch, `OPERATION_NOT_SUPPORTED`.
+- `metamap-webhook`: the callback endpoint, protected by a URL token (`METAMAP_WEBHOOK_TOKEN`).
+- No MetaMap secrets exist. On staging, the gateway and the webhook both answer 403 to unauthenticated calls.
+
+**Evidence.**
+- Suite 29 red on staging (live path absent; then the 2 defects fixed in 047) → **16/16** locally and on staging.
+  It covers:
+  - the request payload;
+  - PENDING until the provider answers;
+  - the found / notFound / unavailable mapping;
+  - retry before failing;
+  - one application per answer;
+  - late and unknown callbacks;
+  - BRS verified;
+  - shareholders kept nowhere;
+  - a simulator answer is never a verification;
+  - only the service role can ingest callbacks.
+- Adapter tests (Node, mocked fetch): **13/13**. Type-check of the edge code: clean.
+- Staging after 045/046: 29 suites, **664/664**.
+- Engine 5 fingerprint before and after: identical (463 rows).
+
+**Disposition.**
+- **Implemented to the extent the documentation supports.** It has not been exercised against MetaMap, because
+  no account exists.
+- **Register.** IDENTITY_AUTHORITY: MetaMap is the vendor, the live adapter stays NOT_BUILT and readiness is
+  NOT_WIRED_PENDING_DECISION. The port cannot be switched live (suite 21).
+- **Awaiting a Founder decision.** The person onboarding rule requires `ALIVE_VALID` and a returned KRA PIN,
+  but MetaMap IPRS supplies neither. Until the rule is decided, every live person verification would fail.
+- **External prerequisites:**
+  - a MetaMap account (client ID and secret);
+  - the webhook token;
+  - ODPC registration;
+  - MetaMap's written confirmation of a sandbox host and of its callback format.
