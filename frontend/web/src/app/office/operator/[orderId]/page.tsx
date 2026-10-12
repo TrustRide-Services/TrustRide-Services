@@ -7,7 +7,7 @@ import { Badge, Card, ErrorNote, KV, Kes, Notice, Page, Section, inputClass, lab
 
 type Job = { order_id: string; order_code: string; service_name: string; order_status: string; fare_confirmed: boolean; fare_kes: number | null;
   customer_first_name: string; current_job_id: string | null; current_status: string | null; can_decline: boolean;
-  stops: { job_id: string; seq: number; status: string; from: string; to: string; distance_km: string | null; billed_hours: string | null; description: string }[] };
+  stops: { job_id: string; seq: number; status: string; from: string; to: string; distance_km: string | null; billed_hours: string | null; billed_days?: string | null; description: string }[] };
 
 const NEXT: Record<string, string> = {
   CREATED: "Accept job", ACKNOWLEDGED: "Set off (dispatched)", DISPATCHED: "I'm on the way", EN_ROUTE: "I've arrived",
@@ -35,7 +35,7 @@ export default async function OperatorJob({ params }: { params: Promise<{ orderI
           <Card key={st.job_id} tone={st.job_id === j.current_job_id ? "gold" : undefined} className="flex flex-wrap justify-between gap-2">
             <div>
               <p className="text-text-primary text-sm font-semibold">{st.seq}. {st.from}{st.to !== st.from ? ` → ${st.to}` : ""}</p>
-              <p className="text-text-muted text-xs">{st.description}{st.distance_km ? ` · ${Number(st.distance_km).toFixed(1)} km` : ""}{st.billed_hours ? ` · ${st.billed_hours} h` : ""}</p>
+              <p className="text-text-muted text-xs">{st.description}{st.distance_km ? ` · ${Number(st.distance_km).toFixed(1)} km` : ""}{st.billed_hours ? (st.billed_days ? ` · ${st.billed_days} d × ${st.billed_hours} h` : ` · ${st.billed_hours} h`) : ""}</p>
             </div>
             <Badge status={st.status} />
           </Card>

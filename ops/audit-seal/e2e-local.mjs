@@ -125,7 +125,11 @@ $rw$;`);
     FROM public.trs_e2e_backup_rows b WHERE b.chain_seq = t.chain_seq;
   UPDATE trustride.platform_audit_chain_seal t SET head_hash = b.head_hash, prev_hash = b.prev_hash, immutable_hash = b.immutable_hash
     FROM public.trs_e2e_backup_seals b WHERE b.seal_id = t.seal_id;
-  UPDATE trustride.platform_audit_chain t SET head_hash = b.head_hash, head_seq = b.head_seq FROM public.trs_e2e_backup_heads b WHERE b.chain_table = t.chain_table;
+  -- Only the two chains this test rewrote. Other chains (e.g. the orchestration audits written by the
+  -- 10-second dispatch cycle) keep appending meanwhile; resetting their heads would make every later
+  -- append collide (fail-closed, but it stops the cycle).
+  UPDATE trustride.platform_audit_chain t SET head_hash = b.head_hash, head_seq = b.head_seq FROM public.trs_e2e_backup_heads b
+  WHERE b.chain_table = t.chain_table AND t.chain_table IN ('model_decision_log', 'platform_audit_chain_seal');
   ALTER TABLE trustride.model_decision_log ENABLE TRIGGER USER;
   ALTER TABLE trustride.platform_audit_chain_seal ENABLE TRIGGER USER;
 END $rs$;

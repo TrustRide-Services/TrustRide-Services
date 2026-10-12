@@ -245,7 +245,9 @@ BEGIN
     ARRAY['SKILL_ERRANDS', 'SKILL_SHOPPING', 'SKILL_DRIVING', 'SKILL_CLEANING', 'SKILL_CHEF']);
   PERFORM pg_temp.t_ready_unit(founder, 'EXECUTIVE_ASSISTANT_HUMAN', est, 'EA Safeguarded',
     ARRAY['ENHANCED_VETTING_CLEARANCE', 'CHILD_SAFEGUARDING_CERT', 'FIRST_AID_CERT', 'SKILL_CAREGIVING', 'SKILL_ERRANDS', 'SKILL_DRIVING']);
-  FOR svc IN SELECT sc.service_code, sm.domain_code::text AS dom FROM trustride.service_catalogue sc JOIN trustride.service_macro_domain sm ON sm.macro_domain_id = sc.macro_domain_id
+  FOR svc IN SELECT sc.service_code, sm.domain_code::text AS dom,
+                    (SELECT t.mapping_status FROM trustride.cost_ea_trade_occupation t WHERE t.ea_skill_category::text = sc.requirements->>'ea_skill_category') AS ea_mapping
+             FROM trustride.service_catalogue sc JOIN trustride.service_macro_domain sm ON sm.macro_domain_id = sc.macro_domain_id
              WHERE sc.requirements->>'fulfilment' = 'DISPATCH' ORDER BY sc.service_code LOOP
     r := pg_temp.t_cmd(cust, 'TRUSTRIDE_BUSINESS', 'CUSTOMER_APP', 'RAISE_INTENT', jsonb_build_object('service_code', svc.service_code,
       'order_lines', CASE WHEN svc.dom = 'EXECUTIVE_ASSISTANTS' THEN '[{"scope_detail":{"origin_zone_code":"KSM-MILIMANI-02","billed_hours":3}}]'::jsonb ELSE lines END));
@@ -253,9 +255,16 @@ BEGIN
     PERFORM pg_temp.t_cycle(14);
     SELECT * INTO o FROM trustride.business_order WHERE order_id = ord;
     SELECT computed_total_fare_kes INTO total FROM trustride.fare_quote WHERE quote_id = o.quote_id;
-    PERFORM pg_temp.t_check('service ' || svc.service_code || ' -> matched and priced', o.status = 'QUOTED' AND total > 0,
-      coalesce(o.status::text, 'no order: ' || (r::text)) || ' ' || coalesce(o.status_reason, '') || ' KES ' || coalesce(total::text, '-'));
-    PERFORM pg_temp.t_cmd(cust, 'TRUSTRIDE_BUSINESS', 'CUSTOMER_APP', 'DECLINE_QUOTATION', jsonb_build_object('quote_id', o.quote_id));
+    IF svc.ea_mapping IS NOT NULL AND svc.ea_mapping <> 'GAZETTED_OCCUPATION' THEN
+      -- D24 legal gate: an EA trade whose gazetted occupation awaits determination is not quoted.
+      PERFORM pg_temp.t_check('service ' || svc.service_code || ' -> refused until its gazetted occupation is determined (D24)',
+        o.status = 'FAILED' AND o.quote_id IS NULL AND coalesce(o.status_reason, '') ILIKE '%determin%',
+        coalesce(o.status::text, 'no order: ' || (r::text)) || ' ' || coalesce(o.status_reason, ''));
+    ELSE
+      PERFORM pg_temp.t_check('service ' || svc.service_code || ' -> matched and priced', o.status = 'QUOTED' AND total > 0,
+        coalesce(o.status::text, 'no order: ' || (r::text)) || ' ' || coalesce(o.status_reason, '') || ' KES ' || coalesce(total::text, '-'));
+      PERFORM pg_temp.t_cmd(cust, 'TRUSTRIDE_BUSINESS', 'CUSTOMER_APP', 'DECLINE_QUOTATION', jsonb_build_object('quote_id', o.quote_id));
+    END IF;
     PERFORM pg_temp.t_cycle(4);
   END LOOP;
   PERFORM pg_temp.t_check('declined fares release every worker', NOT EXISTS (

@@ -10,7 +10,7 @@ type Detail = {
   quote: { quote_id: string; total_kes: number; state: string; expires_at: string } | null;
   payment: { status: string; amount_kes: number; rail: string; receipt_code: string | null } | null;
   actions: Record<string, boolean>;
-  lines: { seq: number; description: string; from: string; to: string; distance_km: string | null; billed_hours: string | null; price_kes: string | null; fare_kes: number | null; job_status: string | null }[];
+  lines: { seq: number; description: string; from: string; to: string; distance_km: string | null; billed_hours: string | null; billed_days?: string | null; engagement_unit?: string | null; price_kes: string | null; fare_kes: number | null; job_status: string | null }[];
   operator: { first_name: string; resource_type: string; vehicle: string | null; rating: number | null; rating_count: number } | null;
   tracking: { active: boolean; status: string; resource_type: string; resource_id: string | null; eta: string | null; lat: number | null; lon: number | null; updated_at: string } | null;
   payments: { status: string; amount_kes: number; adapter: string; failure_reason: string | null; receipt: string | null; at: string }[] | null;
@@ -82,7 +82,7 @@ export default async function OrderDetail({ sub, orderId }: { sub: SubShell; ord
               <div>
                 <p className="text-text-primary text-sm font-semibold">{l.description}</p>
                 {l.from && l.to && l.from !== l.to && <p className="text-text-muted text-xs">{l.from} → {l.to}{l.distance_km ? ` · ${Number(l.distance_km).toFixed(1)} km` : ""}</p>}
-                {l.billed_hours && <p className="text-text-muted text-xs">{l.from} · {l.billed_hours} hours</p>}
+                {l.billed_hours && <p className="text-text-muted text-xs">{l.from} · {l.engagement_unit === "DAYS" && l.billed_days ? `${l.billed_days} day${l.billed_days === "1" ? "" : "s"} × ${l.billed_hours} hours` : `${l.billed_hours} hours`}</p>}
               </div>
               <div className="text-right text-sm">
                 {l.fare_kes != null && <p className="text-text-primary"><Kes value={l.fare_kes} /></p>}

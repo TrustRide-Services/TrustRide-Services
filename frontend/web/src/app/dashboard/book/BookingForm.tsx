@@ -29,6 +29,8 @@ export default function BookingForm({ families, zones, maxStops, scheduleMaxDays
   const [stops, setStops] = useState<{ from: string; to: string }[]>([{ from: first, to: zones[1]?.zone_code ?? first }]);
   const [location, setLocation] = useState(first);
   const [hours, setHours] = useState(2);
+  const [unit, setUnit] = useState<"HOURS" | "DAYS">("HOURS");
+  const [days, setDays] = useState(1);
   const [when, setWhen] = useState<"now" | "later">("now");
   const [at, setAt] = useState("");
   const [notes, setNotes] = useState("");
@@ -40,7 +42,8 @@ export default function BookingForm({ families, zones, maxStops, scheduleMaxDays
   const min = localInput(opened + 20 * 60000);
   const max = localInput(opened + scheduleMaxDays * 86400000);
   const lines = service?.needs_hours
-    ? [{ line_description: notes || service.service_name, scope_detail: { origin_zone_code: location, billed_hours: hours } }]
+    ? [{ line_description: notes || service.service_name, scope_detail: { origin_zone_code: location, billed_hours: hours,
+        engagement_unit: unit, ...(unit === "DAYS" ? { billed_days: days } : {}) } }]
     : stops.map((s, i) => ({ line_description: stops.length > 1 ? `Stop ${i + 1}` : notes || service?.service_name, scope_detail: { origin_zone_code: s.from, destination_zone_code: s.to } }));
   const payload = {
     user_type_domain: "CUSTOMER", service_code: service?.service_code, order_lines: lines,
@@ -83,9 +86,21 @@ export default function BookingForm({ families, zones, maxStops, scheduleMaxDays
       {service?.needs_hours ? (
         <div className="grid sm:grid-cols-2 gap-3">
           <label className="text-xs text-text-secondary flex flex-col gap-1">Where{zoneSelect(location, setLocation)}</label>
-          <label className="text-xs text-text-secondary flex flex-col gap-1">Hours
+          <label className="text-xs text-text-secondary flex flex-col gap-1">Book
+            <select value={unit} onChange={(e) => setUnit(e.target.value as "HOURS" | "DAYS")} className="trs-input rounded-lg px-3 py-2 text-sm text-text-primary">
+              <option value="HOURS">By the hour</option>
+              <option value="DAYS">By the day</option>
+            </select>
+          </label>
+          {unit === "DAYS" && (
+            <label className="text-xs text-text-secondary flex flex-col gap-1">Days (1–6, a rest day in every seven)
+              <input type="number" min={1} max={6} value={days} onChange={(e) => setDays(Number(e.target.value))} className="trs-input rounded-lg px-3 py-2 text-sm text-text-primary" />
+            </label>
+          )}
+          <label className="text-xs text-text-secondary flex flex-col gap-1">{unit === "DAYS" ? "Hours each day" : "Hours"}
             <input type="number" min={1} max={12} value={hours} onChange={(e) => setHours(Number(e.target.value))} className="trs-input rounded-lg px-3 py-2 text-sm text-text-primary" />
           </label>
+          <p className="sm:col-span-2 text-xs text-text-muted">Priced under Kenya&apos;s Regulation of Wages (General) Order: the assistant is paid at least the gazetted minimum for the work, with overtime beyond 8 hours a day, night hours and Sunday or public-holiday rates as the law sets.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">

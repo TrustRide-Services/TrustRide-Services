@@ -58,3 +58,68 @@ Suite 24: red on staging (9/10 — only the new register missing; I3/I4/A7 invar
 | Retention | Proposal: COMPLIANCE, 2,555 days (7 years) — awaiting Founder approval |
 
 **WP2 disposition: Implemented and verified (simulator-backed, independent S3-compatible store); Blocked by external dependency for the AWS destination** (AWS account, bucket with Object Lock, IAM role, scheduler). Independent tamper detection is **not** operational on staging until a real seal is retained and verified there.
+
+## WP3 — Statutory EA pricing on the live path (D24) (2026-10-12)
+
+**Live path traced.**
+
+1. BookingForm (EA services take a zone and hours).
+2. `RAISE_INTENT` → `fn_business_service_order_place` (Engine 4: validates, stamps the shift).
+3. Matching → `fn_business_resource_reserved_accept` (builds the pricing lines).
+4. Engine 2 `fn_resource_assign` passes the lines on unchanged.
+5. Engine 5 `fn_cost_resource_dispatch_initiated_accept`. Its EA branch called the established
+   `fn_cost_ea_labor_calculate` (EA-LABOR-1.0.0).
+6. `fare_quote` → `FARE_QUOTED` → the customer accepts.
+7. Payment: the STK amount is `ceil(quote)`.
+8. Settlement is for the quote total.
+
+**Change (migration 040, Founder-authorized §2.1).**
+- **Engine 4.** An EA line records its booking unit (HOURS, or DAYS 1–6 with hours per day) and
+  its real start (`start_at`). Limits are refused at the order. Pricing lines now carry the full
+  `scope_detail`.
+- **Engine 5.** New `fn_cost_ea_statutory_calculate` rates each EA line with `fn_cost_ea_engagement_rate`
+  (EA-STATUTORY-1.0.0). It writes the canonical `fare_calculation` (model `EA-STATUTORY-1.0.0`), one
+  calculation line per cited price line, a `cost_record`, and links the estimate.
+- **Dispatch accept.** The EA branch of `fn_cost_resource_dispatch_initiated_accept` now calls it.
+  Text diff: only lines 60–65 changed; the transport branch is identical (`dispatch_accept_diff.txt`).
+- **Non-bypass.** The `fn_cost_ea_quote_statutory_guard` triggers on `fare_quote` and `fare_quote_line`
+  refuse any EA quote from another equation.
+- **Engagement basis.** `WORKER_ENGAGEMENT_BASIS` = CASUAL_EMPLOYEE is set IN_FORCE: Operators are
+  employees (directive §4.2).
+- **Migration 041 (Engine 11).** The order view and job card show days. The booking form adds
+  "by the hour / by the day" and states the legal basis.
+
+**Legal gate.** Patient/elder caregiver and corporate representative have no gazetted occupation
+(mapping `NEAREST_OCCUPATION_PENDING_FOUNDER`). Their services (EA-CAREGIVING-GENERAL,
+EA-ERRANDS-SCHOOL_VISITATION, EA-SHOPPING-REPRESENTATION_DELIVERY) are **refused with the reason, not
+priced**, until the occupation is determined.
+
+**Evidence.**
+- Suite 26 red on staging (live quote EA-LABOR 334.32 for 3 h errands) → **17/17** locally and on staging.
+- Suite 04 now expects the gate for the three services. All 26 suites on staging: **606/606**.
+- Browser j16 **6/6**: 2 days × 8 h booked on screen, KES 3,812.51 = statutory estimate, shown as
+  "2 days × 8 hours", declined without charge.
+
+Before and after on staging, same inputs (`EA_before_after_examples.txt`):
+
+| Booking | EA-LABOR (old) | EA-STATUTORY | Worker legal pay |
+|---|---|---|---|
+| Errands 3 h | 334.32 | 650.40 | 484.02 |
+| Cleaning 4 h | 500.00 | 867.20 | 645.36 |
+| Driving 3 h | 600.00 | 883.98 | 657.84 |
+| Chef 8 h | 1,231.76 | 1,886.20 | 1,403.68 |
+| Errands 2 days × 8 h | not bookable | 2,333.93 | 1,736.88 |
+
+**Engine 5 change report** (staging fingerprint, WP0 → after): 456 → 464 entries.
+- **Added 8:** `fn_cost_ea_statutory_calculate` and its ACL, `fn_cost_ea_quote_statutory_guard` and its
+  ACL, the two triggers, the estimate→calculation FK and its index.
+- **Changed 2:** `fn_cost_resource_dispatch_initiated_accept` (EA branch only), and the
+  `cost_ea_engagement_estimate` columns (+`calculation_id`).
+- **Removed 0.** Every transport function, rate, registry, zone, model and component is identical.
+- Outside the fingerprint: one `cost_ea_rating_rule` row status.
+
+**WP3 disposition: Implemented and verified** for the six trades with a gazetted occupation.
+**Awaiting Founder/legal decision**: the occupation for patient/elder caregiver and corporate
+representative (recommendation in the final report).
+Not yet surfaced in the booking form: the statutory method's TRAVEL, SUBSISTENCE and at-cost lines
+(supported by Engine 5; the form offers labour by hour or day).
