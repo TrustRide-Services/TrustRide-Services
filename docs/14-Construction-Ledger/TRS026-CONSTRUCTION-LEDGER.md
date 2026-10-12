@@ -431,3 +431,55 @@ the query string. `PROTRACK_API_BASE` switches to HTTPS once Protrack confirms i
 
 **Noted.** STK amounts are rounded up to whole shillings (e.g. 650.40 → 651) by Engine 6, as before; the customer pays
 up to 99 cents more than the quote. Unchanged, for the Founder's awareness.
+
+### WP7(d) eTIMS and payroll/PAYE as separate capabilities (decision 2.4)
+
+**eTIMS: defect found.** The existing simulator imitated KRA. It minted "KRACU…" control-unit numbers and a
+`https://etims.kra.go.ke/verify?…` link, a simulation that looked like a real KRA document. Proven red on staging.
+No flow called it.
+
+**Migrations 051 and 052 (Engine 6).**
+- **Tax treatment.** Every invoice records `tax_treatment = UNDETERMINED`, the only value allowed. The caller must
+  state the amount basis (FULL_FARE, COMMISSION or OTHER); none is assumed. TrustRide computes no VAT.
+- **Determination gate.** `ETIMS_TAX_DETERMINATION = PENDING_LEGAL_DETERMINATION`. Outside the simulator a sale is
+  refused with `ETIMS_TAX_DETERMINATION_PENDING`. Nothing is sent towards KRA and no KRA endpoint is assumed.
+- **Simulator.** References are now `SIM-…`, with no QR code and no KRA link. Rows written earlier were relabelled
+  the same way.
+- **Sales.** One invoice per order and basis; a repeat with a different amount is refused, because a correction is a
+  credit note, not an edit. A rejected submission is kept with its reason.
+- **Purchases.** Supplier invoices are recorded with the supplier's control-unit number, once each (Office command
+  `RECORD_PURCHASE_INVOICE`, audited).
+- **Reconciliation.** `fn_integration_etims_reconcile` reports four findings:
+  - invoices without a settlement;
+  - rejected submissions;
+  - full-fare amount mismatches;
+  - settled orders without an invoice. These are reported, not issued; what to issue waits for the determination.
+- Suite 21's eTIMS check now accepts the determination refusal, which is the governing one.
+
+**Payroll/PAYE.** The system holds no payroll data today: no salaries, pay runs or P10 returns.
+- **Migration 053 (Engine 4, which owns pay and payouts).** Statutory rates are versioned, immutable data, each item
+  with its legal source:
+  - PAYE bands: 10 / 25 / 30 / 32.5 / 35%, with band limits at 24,000 / 32,333 / 500,000 / 800,000;
+  - personal relief: 2,400;
+  - NSSF: 6% + 6% up to 108,000;
+  - SHIF: 2.75%, minimum 300;
+  - Housing Levy: 1.5% + 1.5%.
+- **Housing Levy deductibility is UNCONFIRMED.** Without a stated treatment the calculator refuses; with one, the
+  result is PROVISIONAL.
+- **Confirmation.** The Founder alone records the professional confirmation, with its reference
+  (`CONFIRM_PAYROLL_STATUTORY_SET`). Results are final only after that.
+- Rates cannot be edited in place; a change is a new set.
+
+**Evidence.**
+- Suite 32 red on staging (KRA imitation; capability absent) → **24/24** locally and on staging.
+- Suite 33 red on staging → **18/18** locally and on staging. Its worked examples were computed by hand first
+  (e.g. 50,000 gross, levy deductible: PAYE 5,845.85, net 39,029.15).
+- Suites 01, 05, 13, 14, 17, 18, 19 and 21 are green.
+
+**Disposition.** Both capabilities are implemented as far as decision 2.4 allows.
+- **Awaiting the Founder:**
+  - the eTIMS legal and tax determination;
+  - professional confirmation of the payroll rates, including the Housing Levy treatment;
+  - the payroll model (who is paid what, and when) before pay runs, P10 and bank files are built.
+- **External prerequisites:** KRA eTIMS OSCU/VSCU onboarding, sandbox testing and certification against KRA's
+  published specification.

@@ -38,8 +38,9 @@ BEGIN
   BEGIN PERFORM trustride.fn_integration_ntsa_verify('VEHICLE_REGISTRATION', 'KDA123A'); ok := false; v := 'simulated as if live';
   EXCEPTION WHEN OTHERS THEN ok := SQLERRM LIKE 'PROVIDER_NOT_INTEGRATED%'; v := SQLERRM; END;
   PERFORM pg_temp.t_check('D11 NTSA verification refuses PRODUCTION instead of simulating', ok, left(v, 160));
+  -- WP7: the pending tax determination (decision 2.4) is the governing refusal, ahead of the missing adapter.
   BEGIN PERFORM trustride.fn_integration_etims_invoice_submit(gen_random_uuid(), 100); ok := false; v := 'simulated as if live';
-  EXCEPTION WHEN OTHERS THEN ok := SQLERRM LIKE 'PROVIDER_NOT_INTEGRATED%'; v := SQLERRM; END;
+  EXCEPTION WHEN OTHERS THEN ok := SQLERRM LIKE 'PROVIDER_NOT_INTEGRATED%' OR SQLERRM LIKE 'ETIMS_TAX_DETERMINATION_PENDING%'; v := SQLERRM; END;
   PERFORM pg_temp.t_check('D12 eTIMS submission refuses PRODUCTION instead of simulating', ok, left(v, 160));
   -- WP6: routing has a live path; with no current provider route it fails explicitly instead of simulating.
   BEGIN PERFORM * FROM trustride.fn_integration_routing_compute('KSM-CBD-01', 'KSM-MILIMANI-02'); ok := false; v := 'ran';
