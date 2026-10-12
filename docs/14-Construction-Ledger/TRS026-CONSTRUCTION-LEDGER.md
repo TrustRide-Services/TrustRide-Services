@@ -123,3 +123,40 @@ Before and after on staging, same inputs (`EA_before_after_examples.txt`):
 representative (recommendation in the final report).
 Not yet surfaced in the booking form: the statutory method's TRAVEL, SUBSISTENCE and at-cost lines
 (supported by Engine 5; the form offers labour by hour or day).
+
+## WP4 — System-wide Engine 7/8 coordination (2026-10-12)
+
+**Specifications read.** Engine 7 blueprint (806 lines), Engine 8 blueprint (878 lines), FDN-001 `routing_rule`.
+Engine 8 governs only fan-out and fan-in executions; one-to-one signals pass through Engine 7 alone.
+
+**Inventory (live function catalogue).**
+- 55 outbox emission sites and 48 active routes. All 48 are handled by their destination inbox (checked against the handler source).
+- Six fan-out executions (order placed, service resolved, resource assigned, fleet verified, marketplace sale, advisory anomaly) and one fan-in (Engine 5 pricing needs the service context).
+- Direct cross-engine calls were classified. Synchronous state-changing calls kept, with reasons: marketplace listing (atomic sale), quote lock and finalize (atomic with the job; Engine 5 protected), Office fleet registration, routing read.
+- Two dormant handlers (`VENDOR_VERIFICATION_UPDATED`, `ZONE_SURGE_TRIGGERED`) are never emitted.
+- Document: `docs/15-Engine-Interaction-Inventory/ENGINE_7_8_INTERACTION_INVENTORY.md`.
+
+**Defects found.**
+- The dispatch cycle called `fn_coord_admission_check` for every signal and **ignored its answer**: a DEFERRED signal was dispatched anyway.
+- 14 of 18 Engine 8 runtime functions were never called.
+- Engine 5 pricing failed an order (NO_SERVICE_CONTEXT_CACHED) if the dispatch arrived before the service context.
+- Duplicate executions ran twice.
+
+**Specification gap, recorded.** The blueprints say the routing rule marks fan-out and fan-in, but
+FDN-001 `routing_rule` has no such column. Engine 8's own `coord_admission_policy` is used as the
+declaration; no Foundation table was altered.
+
+**Migration 042.**
+- **Declarations.** Policies for the fan-out signal types; `coord_dependency_rule` (RESOURCE_DISPATCH_INITIATED → E05 requires SERVICE_CONTEXT_RESOLVED → E05, hold 300 s).
+- **`fn_coord_govern`.** Admission once per signal; exactly-once fingerprint; workflow context and stages; dependency hold, release, failure and timeout; consensus hold, commit, abort and not-opened timeout. It writes nothing while a signal stays held.
+- **`fn_coord_finalize`.** Stage outcome, execution completion with certificate, release to Engine 7. A failed branch marks the workflow FAILED and records a TERMINATE recovery and a critical runtime alert.
+- **`fn_orch_dispatch_cycle`.** Engine 8 decides first. HELD stays PENDING; a refusal goes to DEAD_LETTER with a dead-letter review row and an Office alert; the unconditional admission call is removed; finalize runs after every handler.
+
+**Evidence.**
+- Suite 27: red on staging (3 of 8 passing: a dispatch was delivered without its context, duplicates ran twice, no hold) → **17/17** locally and on staging. Covered: delayed delivery held then released, refused prerequisite, overdue prerequisite, duplicate refused, consumer failure finalized and alerted, consensus COMMIT and ABORT, nothing written while held, a real order fully coordinated with one-to-one signals bypassing Engine 8, and every routed signal terminal.
+- Staging: 27 suites **623/623**; the live dispatch cycle succeeded 89 of 89 times in the first 15 minutes after the push.
+- Integrated proof **44/44** on TRS026-ORDER-000000022 (`proof-wp4.json`). The first attempt failed at its precondition (the rider was still AVAILABLE after the "End shift" step). It was not reproducible: "End shift" was verified by hand and the rerun passed.
+
+**WP4 disposition: Implemented and verified.** Engines 7 and 8 coordinate every declared fan-out and fan-in.
+Retained synchronous cross-engine calls are documented. Converting them to signals would be an
+architecture decision for the Founder, not done here.
