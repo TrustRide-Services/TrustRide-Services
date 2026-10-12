@@ -3,7 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { envStatus, gateContext, officeAccess, type Environment } from "@/lib/trustride";
 import { chooseEnvironment, chooseEnvironmentForEntity, claimFounder, enterMarketplaceAsBuyer, refreshVerification, requestOfficeAccess } from "./actions";
-import { addContactAction, resendCodeAction, signOutAction, verifyContactAction } from "@/app/actions";
+import { addContactAction, resendCodeAction, retryRegistrationAction, signOutAction, verifyContactAction } from "@/app/actions";
+import { createClient } from "@/lib/supabase/server";
 import ActionForm from "@/components/ActionForm";
 import { inputClass, when } from "@/components/ui";
 
@@ -29,6 +30,23 @@ const OFFICE_SURFACES = [
   { code: "OPERATOR_APP", label: "Operator App" },
   { code: "EXECUTIVE_DASHBOARD", label: "Executive Dashboard" },
 ];
+
+// Why the identity check failed, in words (Engine 6 result, Foundation reasons).
+const RESULT_TEXT: Record<string, string> = {
+  INVALID: "The ID number was not accepted by the register.",
+  DECEASED: "The register records the holder of this ID number as deceased.",
+  NOT_FOUND: "The register has no record of this ID number.",
+  PROVIDER_UNAVAILABLE: "The identity service did not answer — your details were never checked.",
+  RECORD_FOUND_STATUS_UNKNOWN: "A record was found, but its status could not be confirmed.",
+};
+const REASON_TEXT: Record<string, string> = {
+  REAL_LEGAL_NAMES_MISMATCH: "Your names do not match the register exactly.",
+  PERSON_STATUS_NOT_VALID: "The register did not confirm a valid, living record.",
+  KRA_PIN_NOT_RETURNED: "No KRA PIN was returned for this record.",
+  NATIONAL_ID_HELD_BY_ANOTHER_IDENTITY: "This ID number is already registered to another TrustRide identity.",
+};
+type RetryOptions = { status: string; retryable: boolean; same_details_allowed: boolean; last_result: string | null; reasons: string[];
+  legal_name: string | null; national_id_masked: string | null };
 
 function StatusChip({ status }: { status: string | undefined }) {
   if (!status) return null;
@@ -60,6 +78,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
   const isVerified = ctx.identity_status === "ACTIVE";
   const isRejected = !isVerified && (outcome === "FAILED" || outcome === "REJECTED");
   const office = officeAccess(ctx);
+  const retry = isRejected ? ((await (await createClient()).rpc("fn_my_registration_retry_options")).data as RetryOptions | null) : null;
   const isStaff = office.admin || office.executive || office.operator;
   const phone = ctx.phone_contact;
   const officePending = ctx.office_request && ["SUBMITTED", "UNDER_REVIEW"].includes(ctx.office_request.response ?? "SUBMITTED")
@@ -84,12 +103,27 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
           <>
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-danger mb-3">Authentication not confirmed</p>
             <h1 className="font-display text-xl font-semibold text-text-primary mb-3 text-balance">We couldn&apos;t verify this identity</h1>
-            {ctx.verification_failed_reasons?.length ? (
-              <ul className="text-sm text-text-secondary mb-3">{ctx.verification_failed_reasons.map((r) => <li key={r}>{r.toLowerCase().replaceAll("_", " ")}</li>)}</ul>
+            <ul className="text-sm text-text-secondary mb-4 flex flex-col gap-1">
+              {retry?.last_result && RESULT_TEXT[retry.last_result] && <li>{RESULT_TEXT[retry.last_result]}</li>}
+              {(retry?.reasons ?? []).filter((r) => REASON_TEXT[r]).map((r) => <li key={r}>{REASON_TEXT[r]}</li>)}
+            </ul>
+            {retry?.retryable ? (
+              <div className="w-full text-left trs-card p-4 flex flex-col gap-3">
+                <p className="text-xs text-text-secondary">
+                  {retry.same_details_allowed
+                    ? "You can send the same details again, or correct them first."
+                    : "Correct your legal name or ID number exactly as on your ID card — the same details would give the same answer."}
+                </p>
+                <ActionForm action={retryRegistrationAction} submit={retry.same_details_allowed ? "Check again" : "Correct and check again"}>
+                  <label className="flex flex-col gap-1 text-xs text-text-secondary">Full legal name (as on your ID)
+                    <input name="full_legal_name" defaultValue={retry.legal_name ?? ""} className={inputClass} /></label>
+                  <label className="flex flex-col gap-1 text-xs text-text-secondary">National ID number {retry.national_id_masked ? `(submitted ${retry.national_id_masked}; leave blank to keep it)` : ""}
+                    <input name="national_id" inputMode="numeric" autoComplete="off" className={inputClass} /></label>
+                </ActionForm>
+              </div>
             ) : null}
-            <p className="text-sm text-text-secondary max-w-md leading-relaxed">
-              The details you submitted didn&apos;t clear the official identity check — often a typo in the ID number or name.
-              Contact TrustRide support: trustride.ke@gmail.com · 0756 984 386.
+            <p className="text-xs text-text-muted max-w-md leading-relaxed mt-4">
+              Need help? TrustRide support: trustride.ke@gmail.com · 0756 984 386.
             </p>
           </>
         ) : !isVerified ? (

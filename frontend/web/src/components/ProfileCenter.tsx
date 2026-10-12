@@ -1,10 +1,11 @@
 import { gateContext, project } from "@/lib/trustride";
+import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { ACTING_COOKIE, TOP_OF, type SubShell } from "@/lib/shells";
 import ActionForm from "@/components/ActionForm";
 import CommandForm from "@/components/CommandForm";
 import {
-  addContactAction, declareKraAction, registerEntityAction, removeContactAction, resendCodeAction, setPreferenceAction,
+  addContactAction, declareKraAction, registerEntityAction, removeContactAction, resendCodeAction, secondaryProfileAction, setPreferenceAction,
   setPrimaryContactAction, verifyContactAction,
 } from "@/app/actions";
 import { Badge, Card, Empty, ErrorNote, KV, Notice, Page, Section, inputClass, labelClass, when } from "@/components/ui";
@@ -16,6 +17,11 @@ type Profile = {
   kra_pin: { value: string; status: string } | null;
   referral_applied: boolean;
   simulated_messages: { channel: string; body: string; at: string }[];
+};
+type Secondary = {
+  address: { address_line_1: string; town: string | null; county_code: string | null; ward: string | null; estate: string | null; since: string } | null;
+  socioeconomic: { income_band: string | null; household_size: number | null; primary_language: string | null; recorded_at: string } | null;
+  education: { education_level: string; institution: string | null; qualification: string | null; year_completed: number | null }[];
 };
 
 // Profile (projection MY_PROFILE): Foundation's one authoritative contact
@@ -29,6 +35,9 @@ export default async function ProfileCenter({ sub, referralSub }: { sub: SubShel
   const acting = TOP_OF[sub] === "TRUSTRIDE_OFFICE" ? "" : (await cookies()).get(ACTING_COOKIE)?.value ?? "";
   const owner = ctx?.represented_entities.some((e) => e.user_id === acting) ? acting : "";
   const ownerField = owner ? <input type="hidden" name="owner" value={owner} /> : null;
+  // The secondary profile belongs to a person, on their own identity only.
+  const second = !owner && p.identity.primitive === "PERSON"
+    ? ((await (await createClient()).rpc("fn_my_secondary_profile")).data as Secondary | null) : null;
   return (
     <Page title="Profile" intro={`${p.identity.display_name} · ${p.identity.global_uid}`}>
       <Section title="Contact methods">
@@ -94,6 +103,55 @@ export default async function ProfileCenter({ sub, referralSub }: { sub: SubShel
         </div>
         <p className="text-xs text-text-muted">Urgent messages (your fare to confirm, your driver has arrived, payment) are sent even in quiet hours.</p>
       </Section>
+
+      {second && (
+        <Section title="About you (optional)">
+          <p className="text-xs text-text-muted -mt-1">Not needed to use TrustRide. Recorded on your own identity only; you can update it at any time.</p>
+          <div className="grid md:grid-cols-3 gap-3">
+            <Card>
+              <p className="text-sm text-text-primary font-semibold mb-2">Home address</p>
+              {second.address && <p className="text-xs text-text-secondary mb-2">{second.address.address_line_1}{second.address.town ? `, ${second.address.town}` : ""} · county {second.address.county_code} · since {when(second.address.since)}</p>}
+              <ActionForm action={secondaryProfileAction} submit="Save address" variant="ghost">
+                <input type="hidden" name="category" value="ADDRESS" />
+                <label className={labelClass}>Plot, building or street<input name="address_line_1" required defaultValue={second.address?.address_line_1 ?? ""} className={inputClass} /></label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className={labelClass}>Town<input name="town" defaultValue={second.address?.town ?? ""} className={inputClass} /></label>
+                  <label className={labelClass}>County code (01–47)<input name="county_code" required maxLength={2} inputMode="numeric" placeholder="42" defaultValue={second.address?.county_code ?? ""} className={inputClass} /></label>
+                  <label className={labelClass}>Ward<input name="ward" defaultValue={second.address?.ward ?? ""} className={inputClass} /></label>
+                  <label className={labelClass}>Estate<input name="estate" defaultValue={second.address?.estate ?? ""} className={inputClass} /></label>
+                </div>
+              </ActionForm>
+            </Card>
+            <Card>
+              <p className="text-sm text-text-primary font-semibold mb-2">Education</p>
+              {second.education.length === 0 ? <p className="text-xs text-text-muted mb-2">Nothing recorded.</p> : (
+                <ul className="text-xs text-text-secondary mb-2 flex flex-col gap-0.5">
+                  {second.education.map((e, i) => <li key={i}>{e.education_level}{e.qualification ? ` · ${e.qualification}` : ""}{e.institution ? ` · ${e.institution}` : ""}{e.year_completed ? ` (${e.year_completed})` : ""}</li>)}
+                </ul>
+              )}
+              <ActionForm action={secondaryProfileAction} submit="Add qualification" variant="ghost">
+                <input type="hidden" name="category" value="EDUCATION" />
+                <label className={labelClass}>Level<input name="education_level" required placeholder="e.g. Diploma" className={inputClass} /></label>
+                <label className={labelClass}>Qualification<input name="qualification" className={inputClass} /></label>
+                <label className={labelClass}>Institution<input name="institution" className={inputClass} /></label>
+                <label className={labelClass}>Year completed<input name="year_completed:n" type="number" min={1940} max={new Date().getFullYear()} className={inputClass} /></label>
+              </ActionForm>
+            </Card>
+            <Card>
+              <p className="text-sm text-text-primary font-semibold mb-2">Household</p>
+              {second.socioeconomic && <p className="text-xs text-text-secondary mb-2">Household of {second.socioeconomic.household_size ?? "—"} · {second.socioeconomic.primary_language ?? "language not given"} · recorded {when(second.socioeconomic.recorded_at)}</p>}
+              <ActionForm action={secondaryProfileAction} submit="Save household" variant="ghost">
+                <input type="hidden" name="category" value="SOCIOECONOMIC" />
+                <label className={labelClass}>Household size<input name="household_size:n" type="number" min={1} max={50} defaultValue={second.socioeconomic?.household_size ?? ""} className={inputClass} /></label>
+                <label className={labelClass}>Main language<input name="primary_language" defaultValue={second.socioeconomic?.primary_language ?? ""} className={inputClass} /></label>
+                <label className={labelClass}>Income band (optional)<input name="income_band" defaultValue={second.socioeconomic?.income_band ?? ""} className={inputClass} /></label>
+                <label className="flex items-start gap-2 text-xs text-text-secondary"><input type="checkbox" name="consent:b" className="mt-0.5" />
+                  I consent to TrustRide recording this socio-economic information about me (Data Protection Act 2019).</label>
+              </ActionForm>
+            </Card>
+          </div>
+        </Section>
+      )}
 
       <div className="grid md:grid-cols-2 gap-4">
         <Section title="KRA PIN">

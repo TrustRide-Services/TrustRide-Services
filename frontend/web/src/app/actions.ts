@@ -135,3 +135,34 @@ export async function markNotificationsReadAction(fd: FormData) {
   }
   refresh();
 }
+
+// --------------------------------------------- registration retry & secondary profile (Foundation)
+// A retry after a failed identity check. Blank fields keep what was submitted;
+// Foundation decides whether the same details may be sent again.
+export async function retryRegistrationAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const name = String(fd.get("full_legal_name") ?? "").trim();
+  const id = String(fd.get("national_id") ?? "").trim();
+  const r = await rpc("fn_registration_retry_primary", { p_full_legal_name: name || null, p_national_id: id || null });
+  return r?.ok ? { ok: true, message: "Sent for verification again." } : r;
+}
+
+// Address, socio-economic and education profile of the signed-in person.
+// Fields become the record: "name" text, "name:n" number, "name:b" checkbox.
+export async function secondaryProfileAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const category = String(fd.get("category") ?? "");
+  const data: Record<string, unknown> = {};
+  for (const [key, raw] of fd.entries()) {
+    if (key === "category" || key.startsWith("$ACTION")) continue;
+    const [name, type] = key.split(":");
+    const value = String(raw).trim();
+    if (type === "b") data[name] = value === "on" || value === "true";
+    else if (value === "") continue;
+    else if (type === "n") data[name] = Number(value);
+    else data[name] = value;
+  }
+  const supabase = await createClient();
+  const { data: res, error } = await supabase.rpc("fn_secondary_profile_submit", { p_field_category: category, p_field_data: data });
+  if (error) return { error: humanize(error.message) };
+  refresh();
+  return { ok: true, message: (res as { unchanged?: boolean } | null)?.unchanged ? "Already recorded — nothing changed." : "Saved." };
+}

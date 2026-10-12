@@ -47,7 +47,9 @@ export async function signUpAndRegister(_prevState: unknown, formData: FormData)
     p_national_id: nationalId,
     p_consent_given: true,
   });
-  if (regError) return { error: regError.message };
+  // The account exists now, so /register shows the finish-registration form:
+  // carry the reason there, or the person never learns why it was refused.
+  if (regError) redirect(`/register?error=${encodeURIComponent(regError.message)}`);
   await capturePhone(supabase, phone);
 
   await bindSystemAccess(accessId, "REGISTRATION");

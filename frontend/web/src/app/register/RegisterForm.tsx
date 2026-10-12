@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { submitRegistration } from "./actions";
 
-export default function RegisterForm({ email }: { email: string | undefined }) {
+export default function RegisterForm({ email, refused }: { email: string | undefined; refused?: string }) {
   const [state, formAction, pending] = useActionState(submitRegistration, null);
 
   return (
@@ -14,7 +14,7 @@ export default function RegisterForm({ email }: { email: string | undefined }) {
         legal name and ID number to begin.
       </p>
 
-      {state?.error && <p className="text-danger text-sm text-center mb-4">{state.error}</p>}
+      {(state?.error ?? refused) && <p className="text-danger text-sm text-center mb-4">{state?.error ?? refused}</p>}
 
       <input
         name="legalName"

@@ -8,7 +8,8 @@ import { signOutAction } from "@/app/actions";
 // RENDERING STRATEGY: fully dynamic. This is the one screen that must
 // branch on whether a session already exists at all, so it's read straight
 // from the request's cookies -- nothing on it is shared across visitors.
-export default async function RegisterPage() {
+export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const { error: refused } = await searchParams;
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
 
@@ -40,7 +41,7 @@ export default async function RegisterPage() {
         <div className="absolute inset-0 rounded-full bg-gold/15 blur-xl" />
         <Image src="/trustride-logo.png" alt="TrustRide" width={64} height={64} className="relative" />
       </div>
-      <RegisterForm email={userData.user.email} />
+      <RegisterForm email={userData.user.email} refused={refused} />
     </main>
   );
 }

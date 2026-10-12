@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { gateContext, officeAccess, project } from "@/lib/trustride";
 import CommandForm from "@/components/CommandForm";
+import ScenarioInputs, { type PricingRow } from "./ScenarioInputs";
 import { Badge, Card, Empty, ErrorNote, Kes, Page, Section, inputClass, when } from "@/components/ui";
 
 type Kpis = { window_days: number; orders_placed: number; orders_completed: number; orders_cancelled: number; orders_expired_or_failed: number;
@@ -15,8 +16,13 @@ type Advisory = {
 type Scenarios = {
   scenarios: { code: string; name: string; type: string; description: string | null }[];
   runs: { run_id: string; scenario: string; label: string | null; status: string; failure_reason: string | null; completed_at: string | null;
-    outcomes: Record<string, unknown>[] | null; insights: Record<string, unknown>[] | null }[];
+    outcomes: Record<string, unknown>[] | null; insights: Record<string, unknown>[] | null;
+    metrics: Record<string, number> | null; inputs: Record<string, unknown> | null }[];
+  comparisons: { id: string; metric: string; base_label: string | null; compared_label: string | null; base_value: number; compared_value: number; delta: number; at: string }[];
+  pricing_inputs: PricingRow[];
 };
+// Scenarios Engine 10 can run today; the others need a read grant no engine has given it yet.
+const RUNNABLE = ["PRICING_CHANGE", "COST_VS_CAPACITY"];
 
 // Executive Dashboard: KPIs (EXEC_KPIS), Advisory (EXEC_ADVISORY), scenario
 // modelling (EXEC_SCENARIOS + RUN_SCENARIO). Figures are computed from the
@@ -74,13 +80,45 @@ export default async function Executive({ searchParams }: { searchParams: Promis
       <Section title="Scenario modelling">
         <ErrorNote error={s.error} />
         {s.data && (
-          <Card>
-            <CommandForm sub="EXECUTIVE_DASHBOARD" command="RUN_SCENARIO" submit="Run scenario" success="Run complete — see the result below." inline>
-              <select name="scenario_code" className={`${inputClass} w-56`}>{s.data.scenarios.map((x) => <option key={x.code} value={x.code}>{x.name}</option>)}</select>
-              <input name="run_label" placeholder="Label" className={`${inputClass} w-44`} />
-            </CommandForm>
-          </Card>
+          <div className="grid md:grid-cols-2 gap-3">
+            {s.data.scenarios.filter((x) => RUNNABLE.includes(x.code)).map((x) => (
+              <Card key={x.code}>
+                <p className="text-sm text-text-primary font-semibold mb-1">{x.name}</p>
+                {x.description && <p className="text-xs text-text-muted mb-2">{x.description}</p>}
+                <CommandForm sub="EXECUTIVE_DASHBOARD" command="RUN_SCENARIO" fixed={{ scenario_code: x.code }} submit="Run scenario" success="Run complete — see the result below.">
+                  <ScenarioInputs kind={x.code as "PRICING_CHANGE" | "COST_VS_CAPACITY"} rows={s.data!.pricing_inputs} />
+                  <input name="run_label" required placeholder="Label (e.g. boda at 13.50)" className={inputClass} />
+                </CommandForm>
+              </Card>
+            ))}
+          </div>
         )}
+        {s.data && s.data.scenarios.some((x) => !RUNNABLE.includes(x.code)) && (
+          <p className="text-xs text-text-muted">{s.data.scenarios.filter((x) => !RUNNABLE.includes(x.code)).map((x) => x.name).join(", ")}: not available yet — the data they need has not been granted to the modelling engine.</p>
+        )}
+        {s.data && (() => {
+          const done = s.data.runs.filter((r) => r.status === "COMPLETED" && r.metrics);
+          const metrics = [...new Set(done.flatMap((r) => Object.keys(r.metrics ?? {})))];
+          const runLabel = (r: Scenarios["runs"][number]) => `${r.label ?? r.scenario} (${when(r.completed_at)})`;
+          return (
+            <Card>
+              <p className="text-sm text-text-primary font-semibold mb-2">Compare two runs</p>
+              {done.length < 2 ? <Empty>Run at least two scenarios to compare them.</Empty> : (
+                <CommandForm sub="EXECUTIVE_DASHBOARD" command="COMPARE_SCENARIOS" submit="Compare" success="Compared — see below." inline>
+                  <select name="base_run_id" className={`${inputClass} w-56`}>{done.map((r) => <option key={r.run_id} value={r.run_id}>{runLabel(r)}</option>)}</select>
+                  <select name="compared_run_id" defaultValue={done[1]?.run_id} className={`${inputClass} w-56`}>{done.map((r) => <option key={r.run_id} value={r.run_id}>{runLabel(r)}</option>)}</select>
+                  <select name="comparison_metric" className={`${inputClass} w-56`}>{metrics.map((m) => <option key={m} value={m}>{m.replaceAll("_", " ")}</option>)}</select>
+                </CommandForm>
+              )}
+              {s.data.comparisons.map((c) => (
+                <p key={c.id} className="text-sm border-b border-border py-1.5 flex flex-wrap justify-between gap-2 mt-1">
+                  <span className="text-text-primary">{c.base_label} → {c.compared_label} <span className="text-text-muted text-xs">{c.metric.replaceAll("_", " ")} · {when(c.at)}</span></span>
+                  <span className="tabular-nums text-text-secondary">{c.base_value} → {c.compared_value} <span className={c.delta >= 0 ? "text-success" : "text-danger"}>({c.delta >= 0 ? "+" : ""}{c.delta})</span></span>
+                </p>
+              ))}
+            </Card>
+          );
+        })()}
         {s.data?.runs.map((r) => (
           <Card key={r.run_id} tone={r.status === "FAILED" ? "danger" : undefined} className="flex flex-col gap-1">
             <div className="flex justify-between gap-2"><span className="text-sm text-text-primary">{r.scenario}{r.label ? ` · ${r.label}` : ""} <span className="text-text-muted text-xs">{when(r.completed_at)}</span></span><Badge status={r.status} /></div>

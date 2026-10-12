@@ -531,3 +531,96 @@ No port is above 6: no credentials, and no live transaction.
 - **Office forms** for NTSA lookup, purchase invoices, payroll confirmation and EPRA: to WP8.
 
 **Migrations this WP:** 045–054, all on staging; the repository equals staging.
+
+## WP8 — D20 surfaces and Office compliance forms (2026-10-12/13)
+
+**Found by inspection before building:**
+- `fn_registration_retry_primary` and `fn_secondary_profile_submit` were already callable by any signed-in person,
+  with no screen. Their gaps were live exposure.
+- **No uniqueness on national IDs.** Two identities could hold the same ID, contrary to FDN-001 Art.13.
+- **Retry defects:**
+  - it replayed identical details after a definitive answer;
+  - it could not correct a typo;
+  - it had no row lock, so two retries at once could open two verifications;
+  - a successful verification re-activated every NATIONAL_ID row, including superseded ones.
+- **Secondary profile:**
+  - the socio-economic profile is consent-governed in FDN-001 but took no consent;
+  - the "relationship" path wrote a non-member's name and phone into a free-text note. That is outside the approved
+    relationship model (FDN-001 034: relationships between registered identities only).
+- **Executive screen:** it could not supply scenario inputs, so no pricing run could ever complete from it.
+- **Lost refusals at sign-up:** a refusal after sign-up (e.g. an ID already held) was lost on screen.
+
+**Migrations.**
+
+| Migration | Engine | Change |
+|---|---|---|
+| 055 | Foundation | One verified identity per national ID: capture, retry and verification all refuse a second holder (`NATIONAL_ID_HELD_BY_ANOTHER_IDENTITY`), with a unique index as backstop. Retry rules are defined (below). Retry options read. |
+| 056 | Foundation | Secondary profile: address (counties 01–47), education, socio-economic with consent. Repeats change nothing; values stay out of the audit trail (category and consent only). Free-text next of kin is refused. Own-profile read. |
+| 057 | Engine 11 | `COMPARE_SCENARIOS` on the Executive Dashboard only, keeping D26: no direct call, Executives and the Founder only. Validated, deduplicated and audited (`SCENARIO_COMPARED`). The projection gains run inputs and metrics, comparisons, and Engine 5 pricing rows (read only). |
+| 058 | Engine 3, with Engine 11 commands | Catalogue lifecycle (below). |
+| 059 | Engine 11 | `OFFICE_COMPLIANCE` projection (Admin Console): EPRA cycle in force and recent records, NTSA lookups (marked simulated), supplier invoices, eTIMS determination and 30-day reconciliation, payroll sets with sources, activation dependencies. |
+
+**Retry rules (055).**
+- Retryable only from VERIFICATION_FAILED, with nothing pending, under a row lock.
+- After PROVIDER_UNAVAILABLE, the same details may be resent.
+- After any definitive answer, the details must be corrected.
+- A corrected ID supersedes the old one.
+
+**Catalogue rules (058).** Engine 5 is read, never written.
+- The Office registers DISPATCH services only; intake and marketplace services are TBOC Art.18 special intents.
+- Executive Assistant services need a pillar and a skill category that Engine 5 rates.
+- **Activation** needs coverage plus an active Engine 5 cost-registry row in every covered jurisdiction.
+- **Suspension** needs a reason. New orders are refused ("That service is not available"); orders already placed
+  continue.
+- **Retirement** is terminal and needs no open orders.
+- Every transition is audited and broadcast (`SERVICE_CATALOGUE_UPDATED`); repeats are harmless.
+- Founder or Administrator only. `OFFICE_CATALOGUE` shows pricing linkage and activation blockers.
+
+**Frontend.**
+- `/verify`, failed state: the reasons in words, and a retry form (correct, or resend after an outage).
+- `register/actions.ts`: the refusal reason is carried to the finish-registration form.
+- Profile ("About you (optional)"): address, education and household with consent. Shown only on a person's own
+  identity, not while acting for an organisation.
+- `/office/catalogue` (new): register, coverage, activate or reinstate, suspend, retire, with pricing and blockers.
+- `/office/compliance` (new): forms for EPRA cycles, NTSA lookups, supplier invoices and payroll confirmation. The
+  payroll confirmation is offered to the Founder only. Each section states its simulator or decision dependency.
+- `/office/executive`: pricing-change and cost-vs-capacity runs with their inputs, run comparison, comparisons list.
+  It states which scenarios await a data grant to Engine 10.
+- Office navigation: Catalogue and Compliance added (Administrator).
+
+**Evidence.**
+- **Suites, red on staging before each change → green:**
+
+  | Suite | Result |
+  |---|---|
+  | 35 Registration retry | 24/24 |
+  | 36 Secondary profile | 22/22 |
+  | 37 Scenario comparison | 14/14 |
+  | 38 Catalogue management | 28/28 |
+  | 39 Office compliance forms | 10/10 |
+
+  Suite 38 includes an order quoted before suspension and completed after it.
+- **Staging full regression: 39 suites, 848/848.** Engine 5 fingerprint identical (463 rows).
+- **Browser journey `j17_wp8_surfaces` (local stack, fresh build): 33/33.** Per surface it shows: the authorized
+  journey, refusal of unauthorized actors, persistence, validation messages and duplicate-submission safety.
+- Type-check and lint are clean.
+- Suite 09 failed locally because of leftover browser-journey data on dispatch; it passes on staging (52/52).
+- Existing journeys j1–j16 were not rerun in WP8. They run in full on a fresh database in WP11.
+
+**Acceptance matrix.**
+
+| Surface | Authorized journey | Unauthorized refused | Persistence and state | Audit | Duplicates and retry | Validation and unavailable dependency | Disposition |
+|---|---|---|---|---|---|---|---|
+| Registration retry | j17: fail, correct, verified | No session / active / pending refused (35) | New verification; old ID superseded | `REGISTRATION_PRIMARY_RETRY` (ID masked) | Lock, one pending, identical replay refused | Reasons shown; provider unavailable allows a resend | Implemented and verified |
+| One identity per ID | j17: duplicate refused on screen | — | Unique index; a racing verification fails | `REGISTRATION_PRIMARY_FAILED` with reason | — | Message on screen | Implemented and verified |
+| Secondary profile | j17: address, education, household | Own identity only; tables unreadable to others (36) | History kept on a move | `SECONDARY_DATA_SUBMITTED` (no values), reconciliation note | Identical submissions record nothing | County, year, size; consent required | Implemented and verified; next of kin awaits a Founder decision |
+| Scenario comparison | j17: two runs, compare | Administrator, customer, Admin Console and direct calls refused (37) | `model_comparative_view` | `SCENARIO_COMPARED` | The same comparison is returned, not duplicated | Same run, incomplete run, unknown metric or run rejected | Implemented and verified; 3 scenarios await an Engine 10 data grant |
+| Catalogue | j17: draft, coverage, refused activation, retire, suspend, reinstate | Customer refused (38, j17) | Lifecycle; coverage idempotent | Registered, coverage, activated, suspended, retired | Repeats are no-ops | Engine 5 pricing gate; open orders block retirement | Implemented and verified |
+| Office compliance forms | j17: EPRA, NTSA, invoice | Executive refused; payroll confirmation Founder-only (39, j17) | Through suites 28/30/32/33 | Per those commands | Duplicate invoice refused | Cycle rule, VIN rule; simulator and determination stated | Implemented and verified; live NTSA, eTIMS and payroll final figures remain externally or Founder-blocked |
+
+**Open items for the Founder.**
+- No limit on registration retries (none in the specifications).
+- Next-of-kin details for people outside TrustRide are not in the approved relationship model.
+- Catalogue activation records no governance approval (the `approval_request` workflow is unbuilt).
+- Executive scenarios PEAK_DEMAND, FLEET_EXPANSION and ZONE_IMPACT need read grants to Engine 10.
+- The React form-reset behaviour (fields clear after a refused submission) is unchanged app-wide.
