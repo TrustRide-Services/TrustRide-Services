@@ -160,3 +160,29 @@ declaration; no Foundation table was altered.
 **WP4 disposition: Implemented and verified.** Engines 7 and 8 coordinate every declared fan-out and fan-in.
 Retained synchronous cross-engine calls are documented. Converting them to signals would be an
 architecture decision for the Founder, not done here.
+
+## WP5 — Orphan function `cost_quotes_block_illegal_mutation()` (D19) (2026-10-12)
+
+**Scan (staging, `WP5_orphan_dependency_scan.txt`).**
+- Nothing uses it: 0 pg_depend references, 0 triggers, 0 event triggers, 0 policies, 0 views, 0 cron jobs.
+- No other function names it (including dynamic SQL), and no repository code does.
+- No migration creates it (030 mentions it in a comment only), and the clean rebuild does not contain it.
+- It is executable by its owner (postgres) only.
+
+**Purpose.** It is the Engine 5 blueprint's quote-immutability guard, written for a table named
+`cost_unit_price_quotes` that does not exist. The same invariant is enforced on the real `fare_quote`
+by `fare_quote_block_illegal_mutation()` through `trg_fare_quote_block_illegal_mutation`, with
+identical logic. Removing the orphan disables no protection.
+
+**Removal (migration 043).** Guarded and repeatable:
+- a no-op on a clean rebuild;
+- refuses to drop if anything now depends on the function, or if the `fare_quote` guard is missing;
+- the definition and ACL are kept in the migration as the forensic record.
+
+**Evidence.**
+- Suite 17 red on staging (3 of 4 passing; the orphan was present) → 4/4. Suites 10 and 04 green.
+- Engine 5 fingerprint diff: exactly one entry removed (the orphan).
+- Full catalogue comparison: staging = clean rebuild, 8,147 objects each. Nothing differs except the
+  known presentation-only differences (policy text printing, ACL order).
+
+**WP5 disposition: Implemented and verified.** D19 closed completely.

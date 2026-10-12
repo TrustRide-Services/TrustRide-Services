@@ -16,5 +16,11 @@ BEGIN
     AND c.relname IN ('audit_log', 'resource_ledger_event', 'present_decision_log', 'advisory_decision_log', 'model_decision_log',
                       'orch_execution_audit', 'orch_routing_audit', 'platform_audit_chain_seal', 'platform_audit_chain');
   PERFORM pg_temp.t_check('D19 no role but the owner holds UPDATE, DELETE or TRUNCATE on an audit chain', n = 0, left(coalesce(v, ''), 300));
+  -- WP5: the staging-only orphan is gone; the quote immutability it was written for is enforced on fare_quote.
+  PERFORM pg_temp.t_check('D19/WP5 the orphan cost_quotes_block_illegal_mutation() is not in the database',
+    to_regprocedure('trustride.cost_quotes_block_illegal_mutation()') IS NULL);
+  PERFORM pg_temp.t_check('D19/WP5 the quote immutability guard is enforced on fare_quote (trg_fare_quote_block_illegal_mutation, enabled)',
+    EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'trustride.fare_quote'::regclass AND tgname = 'trg_fare_quote_block_illegal_mutation'
+            AND tgfoid = 'trustride.fare_quote_block_illegal_mutation()'::regprocedure AND tgenabled = 'O'));
 END
 $$;
