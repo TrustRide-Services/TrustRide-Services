@@ -1,0 +1,14 @@
+{
+  "name": "trustride-audit-seal",
+  "private": true,
+  "type": "module",
+  "description": "Publishes TrustRide's daily audit seals to an immutable S3 Object Lock store and verifies the database against them. Runs outside Supabase (separate administrative domain).",
+  "scripts": {
+    "publish": "node publish.mjs",
+    "verify": "node verify.mjs",
+    "e2e-local": "node e2e-local.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.637.0"
+  }
+}

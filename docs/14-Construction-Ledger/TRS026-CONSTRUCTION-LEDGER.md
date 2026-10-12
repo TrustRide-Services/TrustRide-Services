@@ -45,3 +45,16 @@ Changed: `supabase/migrations/20261012000038_engine007_historical_queue_exceptio
 Suite 24: red on staging (9/10 — only the new register missing; I3/I4/A7 invariants already hold), green 11/11 local and staging.
 
 **WP1 disposition: Implemented and verified**, except j5's corrected step, which is exercised in the WP11 fresh regression.
+
+## WP2 — External audit seals (2026-10-12)
+
+| Item | Result |
+|---|---|
+| Migration 039 `platform_external_audit_seal` | Seal record `trustride.audit-seal/v1`; export, receipt (payload hash must match, retention must be in the future), event (failures alert the Office, critical), chain rows with canonical text, hourly watchdog (silent until a destination is activated). Service-role only. Receipts and events append-only |
+| Suite 25 | Red on staging (functions absent) → **15/15** local and staging |
+| Publisher / verifier | `ops/audit-seal/` (Node, AWS SDK v3 `@aws-sdk/client-s3` 3.637.0), designed to run in a separate administrative domain |
+| End-to-end proof | `ops/audit-seal/e2e-local.mjs` against MinIO DEVELOPMENT.2025-05-24 (image `bitnamilegacy/minio@sha256:451fe685…a349c`), Object Lock COMPLIANCE: **11/11 PASS** — publish+receipt; verify 8 chains; delete, retention-shortening and replacement refused; failed write reported and alerted, never receipted; retry succeeded; consistent owner-level rewrite invisible in-database but **detected by the external seal** (VERIFY_MISMATCH at the sealed position); restored and re-verified. Evidence `WP2_external_seal_e2e_result.json` |
+| AWS S3 destination | **Not activated** — no AWS account or credentials exist on this machine or in the project. Activation steps, IAM policy and limits in `ops/audit-seal/README.md` |
+| Retention | Proposal: COMPLIANCE, 2,555 days (7 years) — awaiting Founder approval |
+
+**WP2 disposition: Implemented and verified (simulator-backed, independent S3-compatible store); Blocked by external dependency for the AWS destination** (AWS account, bucket with Object Lock, IAM role, scheduler). Independent tamper detection is **not** operational on staging until a real seal is retained and verified there.
