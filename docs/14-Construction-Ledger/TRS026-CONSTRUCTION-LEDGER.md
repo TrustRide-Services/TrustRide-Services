@@ -330,3 +330,32 @@ routing log now carries the true provenance.
   - the webhook token;
   - ODPC registration;
   - MetaMap's written confirmation of a sandbox host and of its callback format.
+
+### WP7(b) NTSA vehicle identification by VIN or chassis number (decision 2.7)
+
+**Facts.**
+- NTSA publishes no API for plate or VIN/chassis lookup; access to its records needs an agreement with NTSA or a
+  licensed gateway. No endpoint is invented and nothing is scraped.
+- TrustRide records no VIN or chassis number on vehicles today; the NTSA port checked plates only (simulator).
+
+**Migrations.**
+- **048:** check type `VEHICLE_IDENTIFICATION` (own transaction).
+- **049:** `fn_integration_ntsa_vehicle_identify(type, identifier)`, the Engine 6 boundary.
+  - Validates before any lookup:
+    - VIN: 17 characters without I, O or Q (ISO 3779). The check digit is not enforced, since it is North American only.
+    - Chassis/frame number: 5–25 letters, digits and hyphens (e.g. NZE141-6012345).
+  - Normalises the identifier.
+  - Answers from the simulator: marked simulated, no make, model, owner or plate invented; the `00` suffix means not found.
+  - Logs every lookup.
+  - Refuses with `PROVIDER_NOT_INTEGRATED` in a live mode.
+  - Office command `NTSA_VEHICLE_LOOKUP` (Founder or Administrator); the function is not callable by signed-in users directly.
+  - Register: NTSA stays NOT_BUILT / SIMULATOR_ONLY_PENDING_PROVIDER; the blocking dependency names the VIN/chassis lookup.
+
+**Evidence.** Suite 30 red on staging (boundary absent) → **19/19** locally and on staging. Suites 01, 03, 13,
+17 and 21 are green on staging.
+
+**Disposition.**
+- **Implemented (boundary and simulator).**
+- **External prerequisite:** an NTSA access agreement or a licensed gateway, then the gateway adapter.
+- **Pending (WP8):** an Office form for the lookup. Capturing VIN/chassis at vehicle registration is a Foundation
+  change not requested by the directive; noted for the Founder.
