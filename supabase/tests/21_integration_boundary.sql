@@ -41,8 +41,9 @@ BEGIN
   BEGIN PERFORM trustride.fn_integration_etims_invoice_submit(gen_random_uuid(), 100); ok := false; v := 'simulated as if live';
   EXCEPTION WHEN OTHERS THEN ok := SQLERRM LIKE 'PROVIDER_NOT_INTEGRATED%'; v := SQLERRM; END;
   PERFORM pg_temp.t_check('D12 eTIMS submission refuses PRODUCTION instead of simulating', ok, left(v, 160));
-  BEGIN PERFORM * FROM trustride.fn_integration_routing_compute('NOPE', 'NOPE'); ok := false; v := 'ran';
-  EXCEPTION WHEN OTHERS THEN ok := SQLERRM LIKE 'PROVIDER_NOT_INTEGRATED%'; v := SQLERRM; END;
+  -- WP6: routing has a live path; with no current provider route it fails explicitly instead of simulating.
+  BEGIN PERFORM * FROM trustride.fn_integration_routing_compute('KSM-CBD-01', 'KSM-MILIMANI-02'); ok := false; v := 'ran';
+  EXCEPTION WHEN OTHERS THEN ok := SQLERRM LIKE 'PROVIDER_NOT_INTEGRATED%' OR SQLERRM LIKE 'ROUTING_UNAVAILABLE%'; v := SQLERRM; END;
   PERFORM pg_temp.t_check('D11 routing refuses PRODUCTION instead of simulating', ok, left(v, 160));
 END
 $$;

@@ -186,3 +186,69 @@ identical logic. Removing the orphan disables no protection.
   known presentation-only differences (policy text printing, ACL order).
 
 **WP5 disposition: Implemented and verified.** D19 closed completely.
+
+## WP6 — EPRA fuel prices and live routing as pricing inputs (2026-10-12)
+
+**Research.**
+- **EPRA** publishes no API and no machine-readable feed. Maximum retail prices are announced monthly
+  for the cycle from the 15th to the 14th (Petroleum Act 2019 s.101(y), L.N. 192 of 2022), by press
+  statement on its website and social channels.
+- **Current Kisumu cycle** (15 Sep – 14 Oct 2026): super petrol KES 213.69, diesel 218.08, kerosene
+  191.63 per litre, VAT inclusive. Sources: Citizen Digital and Kenyans.co.ke reporting of the EPRA
+  review. The next review is due on 14 October.
+- **Routing.** No provider account exists. Options: OpenRouteService (OSM, self-hostable, with a free
+  hosted tier), HERE, Mapbox, Google. Official pricing and storage terms were not verified in this
+  session. The provider choice is the Founder's.
+
+**Found in Engine 5 (not changed; stopped per directive 4.5).** The blueprint's EPRA derivation is
+already built: `fn_cost_epra_fuel_index_ingest` sets R_d = pump price ÷ km per litre + maintenance
+per km and versions rates. But it applies **any** fuel type to **every** fuel-consuming rate and
+ignores jurisdiction, because `cost_rate` carries neither. At the September Kisumu prices R_d would
+fall 9–20%:
+
+| Vehicle | R_d now | Derived from petrol | Derived from diesel |
+|---|---|---|---|
+| Boda | 12.00 | 9.61 | 9.73 |
+| Tuk-tuk | 18.00 | 15.18 | 15.40 |
+| Sedan | 28.00 | 23.81 | 24.17 |
+| Pickup | 35.00 | 31.74 | 32.23 |
+| Van | 42.00 | 36.71 | 37.26 |
+| Truck | 55.00 | 50.62 | 51.35 |
+
+**Defect found and fixed in Engine 6.** The EPRA simulator emitted `EPRA_FUEL_INDEX_UPDATED`, so a
+simulated price re-derived live rates. Proven red on staging: boda R_d moved 12.00 → 9.36 inside the
+rolled-back test.
+
+**Migration 044.**
+- **EPRA recording.** `RECORD_EPRA_PRICE_CYCLE` (Office) → `fn_integration_epra_cycle_record` stores
+  each cycle with its source, URL, publication date and the person who recorded it. It validates the
+  15th–14th cycle, the source, fuel type, jurisdiction, a plausible range (80–400 KES/L) and conflicts;
+  a duplicate is idempotent; recording is audited.
+- **Current price.** `fn_integration_epra_current` returns no price outside a cycle, so a stale value is
+  never served. A daily freshness watch alerts the Office when the current cycle is missing.
+- **Engine 5 gate.** Nothing is sent to Engine 5 while `EPRA_RATE_DERIVATION_ACTIVE` = FALSE. The
+  simulator no longer emits.
+- **Routing provenance.** Every route records provider, reference, retrieval time and whether it was
+  simulated. Terrain is recorded as unknown for provider routes, never invented.
+- **Live routing path.** Only a current, unsuperseded provider route from `integration_route_matrix`
+  (fresh for 30 days) is used. Otherwise `ROUTING_UNAVAILABLE` is raised and a refresh requested,
+  one in flight at a time. `fn_integration_route_matrix_apply` refuses malformed, unknown-zone or
+  simulator responses as a whole and treats a repeated response as idempotent.
+- **Register.** ROUTING stays NOT_BUILT, pending the provider choice. EPRA is recorded but not applied.
+
+**Evidence.**
+- Suite 28 red on staging (0 of 3 passing: simulated price re-derived rates, no recording, no
+  provenance) → **25/25** locally and on staging.
+- Suite 21 updated: routing's live path now fails with `ROUTING_UNAVAILABLE`.
+- Staging: 28 suites, **651/651**.
+
+**Noted, not changed (Engine 5).** `fn_cost_fare_calculate` labels any supplied terrain multiplier
+`LIVE_ROUTING` in its cost record, including the simulator's hash-derived one (staging only). The
+routing log now carries the true provenance.
+
+**WP6 disposition.**
+- **Partially implemented.** The Engine 6 side is implemented and verified.
+- **Awaiting Founder decision:**
+  1. approve the Engine 5 derivation correction (fuel type and jurisdiction per rate) and the fare impact before EPRA feeds pricing;
+  2. choose the routing provider; its gateway adapter and account follow.
+- **Pending (WP8):** the Office screen form for recording an EPRA cycle. The command works today.
