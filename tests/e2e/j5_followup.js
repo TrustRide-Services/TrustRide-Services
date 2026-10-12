@@ -58,7 +58,11 @@ const text = async (page) => (await page.locator("body").innerText()).replace(/\
     await C.waitForURL(/\/dashboard\/orders\/[0-9a-f-]{36}/, { timeout: 30000 }).catch(() => {});
     step("Entity: representative placed an order in the company's name", /orders\/[0-9a-f-]{36}/.test(C.url()), C.url() + " " + (await text(C)).slice(0, 200));
   } else {
-    step("Entity: company can book (needs a verified M-Pesa phone of its own)", false, (await text(C)).match(/Verify your phone[^.]*\./)?.[0] ?? "button disabled");
+    // Invariant (D3, one verified phone per identity incl. organisations): a company with no
+    // verified M-Pesa phone of its own cannot book and is told why. j6 adds and verifies the
+    // company's phone and then proves booking is enabled.
+    const msg = (await text(C)).match(/Verify your phone[^.]*\./)?.[0];
+    step("Entity: company without its own verified M-Pesa phone cannot book yet and is told to verify one", !!msg, msg ?? "button disabled, no reason shown");
   }
   await C.locator('select[name="acting"]').selectOption("");
   await C.getByRole("button", { name: "Act as" }).click();

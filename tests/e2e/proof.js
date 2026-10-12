@@ -374,12 +374,14 @@ async function proj(sb, sid, code, params = {}) {
     (SELECT status FROM trustride.business_order WHERE order_id = '${orderId}') final_status,
     trustride.fn_resource_unit_availability('${otieno.unit}') boda_unit,
     (SELECT availability_state || ' (' || reason_code || ')' FROM trustride.resource_availability_ledger WHERE resource_type = 'FLEET' AND resource_ref_id = '${otieno.fleet}' AND effective_to IS NULL) boda_fleet,
+    (SELECT availability_state::text FROM trustride.resource_availability_ledger WHERE resource_type = 'FLEET' AND resource_ref_id = '${otieno.fleet}' AND effective_to IS NULL) boda_fleet_state,
+    EXISTS (SELECT 1 FROM trustride.resource_workforce_unit WHERE workforce_unit_id = '${otieno.unit}' AND fleet_resource_id = '${otieno.fleet}' AND unit_status = 'ACTIVE') boda_fleet_bound,
     (SELECT count(*) FROM trustride.business_job j WHERE j.order_id IN ('${orderId}', '${xId}') AND j.status NOT IN ('VERIFIED','CANCELLED','FAILED')) orphan_jobs,
     (SELECT count(*) FROM trustride.integration_payment_gateway_transaction t WHERE t.order_id = '${orderId}' AND t.txn_status = 'PENDING_CALLBACK') open_payments,
     (SELECT status FROM trustride.business_order WHERE order_id = '${xId}') injected_order_status`);
   const integOk = integ.orders === 1 && integ.lines === 1 && integ.accepted_quotes === 1 && integ.live_jobs === 1 && integ.verified_jobs === 1 && integ.wrong_class_jobs === 0 && integ.units === 1
     && integ.payments === 1 && integ.settled_payments === 1 && integ.settlements === 1 && integ.ledger_postings === 1 && integ.receipts === 1
-    && integ.stale_reservations === 0 && integ.open_tracking === 0 && integ.boda_fleet === "ASSIGNED (BOUND_TO_WORKFORCE_UNIT)" && integ.final_status === "SETTLED" && integ.boda_unit === "AVAILABLE" && integ.orphan_jobs === 0 && integ.open_payments === 0;
+    && integ.stale_reservations === 0 && integ.open_tracking === 0 && integ.boda_fleet_state === "ASSIGNED" && integ.boda_fleet_bound === true && integ.final_status === "SETTLED" && integ.boda_unit === "AVAILABLE" && integ.orphan_jobs === 0 && integ.open_payments === 0;
   row("Database integrity", "System", "1 order, 1 scope line, 1 accepted estimate, 1 Boda job (verified) on 1 unit, 1 payment, 1 settlement, 1 ledger posting, 1 receipt; no stale reservation, orphan, duplicate or open state; Boda unit back to AVAILABLE; motorcycle still bound to its unit",
     JSON.stringify(integ), `direct counts after completion`, integOk);
 
