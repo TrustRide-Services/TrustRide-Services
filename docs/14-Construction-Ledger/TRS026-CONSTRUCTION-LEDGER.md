@@ -359,3 +359,75 @@ routing log now carries the true provenance.
 - **External prerequisite:** an NTSA access agreement or a licensed gateway, then the gateway adapter.
 - **Pending (WP8):** an Office form for the lookup. Capturing VIN/chassis at vehicle registration is a Foundation
   change not requested by the directive; noted for the Founder.
+
+### WP7(c) Google email (decision 2.8)
+
+**Facts.** The database side already existed: an EMAIL notification becomes `NOTIFY_EMAIL` on EMAIL_SERVICE, and the
+gateway refused it with "provider not selected".
+
+**Built.** `integration-gateway/gmail.ts` sends through the Gmail API (`users.messages.send`, `gmail.send` scope).
+- **Authentication, two modes:**
+  - a Google Workspace service account with domain-wide delegation (RS256 assertion);
+  - an OAuth refresh token, which works for any Google mailbox, including @gmail.com.
+- **Message format:** RFC 5322 text, UTF-8 base64, RFC 2047 subjects.
+- **Refused before any call:** header injection (line breaks) and malformed recipients.
+- **SANDBOX:** Gmail has none, so the adapter delivers only to `GMAIL_SANDBOX_RECIPIENT` and refuses without it.
+- **Failures:** every failure is reported as a failure; a 401 drops the token.
+
+**Migration 050.** EMAIL_SERVICE becomes BUILT / LIVE_READY_PENDING_CREDENTIALS (vendor Google). The port stays on the
+simulator until the Office switches it.
+
+**Evidence.** Adapter tests 10/10; suite 31 email checks red → green on staging.
+
+**External prerequisites.**
+- The mailbox, and which mode applies: Workspace or consumer Gmail.
+- The credentials as Edge secrets.
+- If consumer Gmail: a sending limit of about 500 a day, and the OAuth app must be published, or refresh tokens
+  expire after 7 days.
+
+### WP7(e) Hardening: Daraja, Africa's Talking, WhatsApp, Protrack
+
+**Defects found and fixed (gateway).**
+1. **Money lost on an ambiguous outcome.** Any error after an M-Pesa request had been sent (timeout, dropped
+   connection) was reported as a definite failure. A B2C payout Safaricom had accepted would be recorded FAILED with
+   no Office alert, and its later result ignored as already final.
+   - Fixed: such an outcome is now "unknown" and is not reported. The request stays SENT, so Safaricom's result can
+     still settle it; otherwise Engine 6's sweep closes it and tells the Office to verify on the M-Pesa portal.
+     Nothing is re-sent.
+   - The database side of this path was correct but untested. Suite 31 now covers it.
+2. **No timeouts.** No provider call had one; every call now has 20 s.
+3. **Protrack poll failed open.** With credentials missing it signed `md5("undefined")` and called Protrack. It now
+   fails closed.
+4. **Malformed Protrack push.** It returned 502 and half-read the body; it now returns 400.
+5. **Validation before money or messages move:**
+   - Kenyan mobile numbers (E.164 for SMS and WhatsApp; 2547/2541 for Daraja);
+   - Daraja amounts must be whole shillings of at least 1, sent as a JSON number;
+   - configuration is checked before any call.
+6. **Gateway secret and router.** The gateway refuses when its own secret is unset. The router gains
+   `OPERATION_NOT_SUPPORTED` for unknown operations.
+
+**Structure.** Provider code moved unchanged into `providers.ts`, `router.ts` and `protrack-ingest/protrack.ts`, free
+of Deno globals so it is testable. `index.ts` keeps only HTTP and reporting.
+
+**Evidence.**
+- Edge tests (Node, mocked fetch): **50/50** across MetaMap, Gmail, providers/router and Protrack. Type-check of all
+  edge functions: clean.
+- Suite 31: **12/12** on staging (the 9 money checks were green before any change; they now guard the gateway's new
+  reliance on them).
+- Suites 02, 05, 15 and 21 are green on staging.
+- Deployed to staging (Docker bundler; the API bundler returned an internal error). Probes:
+
+  | Call | Result |
+  |---|---|
+  | Gateway, no secret | 403 |
+  | Protrack push, no key | 401 |
+  | Protrack push, bad key | 401 |
+  | Protrack push, malformed | 400 |
+  | Protrack poll, no secret | 403 |
+  | MetaMap webhook, no token | 403 |
+
+**Open item (security).** Protrack's documented API base is plain `http://`, so the access token travels unencrypted in
+the query string. `PROTRACK_API_BASE` switches to HTTPS once Protrack confirms it is served there.
+
+**Noted.** STK amounts are rounded up to whole shillings (e.g. 650.40 → 651) by Engine 6, as before; the customer pays
+up to 99 cents more than the quote. Unchanged, for the Founder's awareness.
