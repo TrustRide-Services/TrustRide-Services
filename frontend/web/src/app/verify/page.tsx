@@ -46,6 +46,7 @@ const REASON_TEXT: Record<string, string> = {
   NATIONAL_ID_HELD_BY_ANOTHER_IDENTITY: "This ID number is already registered to another TrustRide identity.",
 };
 type RetryOptions = { status: string; retryable: boolean; same_details_allowed: boolean; last_result: string | null; reasons: string[];
+  incorrect_attempts: number; attempts_remaining: number; attempt_limit: number; locked: boolean;
   legal_name: string | null; national_id_masked: string | null };
 
 function StatusChip({ status }: { status: string | undefined }) {
@@ -107,9 +108,13 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
               {retry?.last_result && RESULT_TEXT[retry.last_result] && <li>{RESULT_TEXT[retry.last_result]}</li>}
               {(retry?.reasons ?? []).filter((r) => REASON_TEXT[r]).map((r) => <li key={r}>{REASON_TEXT[r]}</li>)}
             </ul>
+            {retry?.locked && (
+              <p className="text-sm text-danger max-w-md mb-2">Identity verification is blocked: {retry.attempt_limit} submissions were found incorrect. Contact TrustRide support below.</p>
+            )}
             {retry?.retryable ? (
               <div className="w-full text-left trs-card p-4 flex flex-col gap-3">
                 <p className="text-xs text-text-secondary">
+                  {retry.incorrect_attempts > 0 && `${retry.attempts_remaining} of ${retry.attempt_limit} attempts remaining. `}
                   {retry.same_details_allowed
                     ? "You can send the same details again, or correct them first."
                     : "Correct your legal name or ID number exactly as on your ID card — the same details would give the same answer."}

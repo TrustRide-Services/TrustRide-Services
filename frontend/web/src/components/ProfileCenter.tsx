@@ -5,7 +5,7 @@ import { ACTING_COOKIE, TOP_OF, type SubShell } from "@/lib/shells";
 import ActionForm from "@/components/ActionForm";
 import CommandForm from "@/components/CommandForm";
 import {
-  addContactAction, declareKraAction, registerEntityAction, removeContactAction, resendCodeAction, secondaryProfileAction, setPreferenceAction,
+  addContactAction, declareKraAction, declineKinAction, endKinAction, nominateKinAction, registerEntityAction, removeContactAction, resendCodeAction, secondaryProfileAction, setPreferenceAction,
   setPrimaryContactAction, verifyContactAction,
 } from "@/app/actions";
 import { Badge, Card, Empty, ErrorNote, KV, Notice, Page, Section, inputClass, labelClass, when } from "@/components/ui";
@@ -23,6 +23,8 @@ type Secondary = {
   socioeconomic: { income_band: string | null; household_size: number | null; primary_language: string | null; recorded_at: string } | null;
   education: { education_level: string; institution: string | null; qualification: string | null; year_completed: number | null }[];
 };
+type Kin = { nominated: { relationship_id: string; display_name: string; since: string } | null;
+  named_by: { relationship_id: string; display_name: string; since: string }[] };
 
 // Profile (projection MY_PROFILE): Foundation's one authoritative contact
 // register (D3) -- the verified phone pays by M-Pesa and receives SMS.
@@ -36,8 +38,10 @@ export default async function ProfileCenter({ sub, referralSub }: { sub: SubShel
   const owner = ctx?.represented_entities.some((e) => e.user_id === acting) ? acting : "";
   const ownerField = owner ? <input type="hidden" name="owner" value={owner} /> : null;
   // The secondary profile belongs to a person, on their own identity only.
-  const second = !owner && p.identity.primitive === "PERSON"
-    ? ((await (await createClient()).rpc("fn_my_secondary_profile")).data as Secondary | null) : null;
+  const person = !owner && p.identity.primitive === "PERSON";
+  const supabase = person ? await createClient() : null;
+  const second = supabase ? ((await supabase.rpc("fn_my_secondary_profile")).data as Secondary | null) : null;
+  const kin = supabase ? ((await supabase.rpc("fn_my_next_of_kin")).data as Kin | null) : null;
   return (
     <Page title="Profile" intro={`${p.identity.display_name} · ${p.identity.global_uid}`}>
       <Section title="Contact methods">
@@ -103,6 +107,35 @@ export default async function ProfileCenter({ sub, referralSub }: { sub: SubShel
         </div>
         <p className="text-xs text-text-muted">Urgent messages (your fare to confirm, your driver has arrived, payment) are sent even in quiet hours.</p>
       </Section>
+
+      {kin && (
+        <Section title="Next of kin">
+          <Card className="flex flex-col gap-3">
+            <p className="text-xs text-text-muted">The person TrustRide may contact if you cannot be reached. They must hold a verified TrustRide identity; naming them gives them no access to your account or your information.</p>
+            {kin.nominated ? (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-text-primary"><span className="font-semibold">{kin.nominated.display_name}</span> <span className="text-text-muted text-xs">since {when(kin.nominated.since)}</span></p>
+                <ActionForm action={endKinAction} submit="Remove" variant="ghost" inline />
+              </div>
+            ) : <p className="text-sm text-text-secondary">No next of kin named yet.</p>}
+            <ActionForm action={nominateKinAction} submit={kin.nominated ? "Name someone else" : "Name next of kin"} inline>
+              <label className={`${labelClass} flex-1 min-w-44`}>Their full name (as registered)<input name="full_name" required className={inputClass} /></label>
+              <label className={`${labelClass} w-44`}>Their verified phone<input name="phone" required inputMode="tel" placeholder="0712 345 678" className={inputClass} /></label>
+            </ActionForm>
+            {kin.named_by.length > 0 && (
+              <div className="border-t border-border pt-3 flex flex-col gap-2">
+                <p className="text-xs text-text-muted">You are named as next of kin by:</p>
+                {kin.named_by.map((n) => (
+                  <div key={n.relationship_id} className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm text-text-primary">{n.display_name} <span className="text-text-muted text-xs">since {when(n.since)}</span></span>
+                    <ActionForm action={declineKinAction} submit="Decline" variant="ghost" inline><input type="hidden" name="relationship_id" value={n.relationship_id} /></ActionForm>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </Section>
+      )}
 
       {second && (
         <Section title="About you (optional)">

@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { gateContext, officeAccess, officeSub, project } from "@/lib/trustride";
+import ActionForm from "@/components/ActionForm";
 import CommandForm from "@/components/CommandForm";
+import { revealKinAction } from "@/app/actions";
 import { Badge, Card, Empty, ErrorNote, Page, inputClass, when } from "@/components/ui";
 
 type Case = { case_id: string; case_code: string; category: string; severity: string; subject: string; status: string; opened_at: string;
-  sla_due_at: string | null; escalated_at: string | null; requester: string; assigned_to: string | null; order_code: string | null;
+  sla_due_at: string | null; escalated_at: string | null; requester: string; requester_user_id: string; assigned_to: string | null; order_code: string | null;
   messages: { author: string; body: string; internal: boolean; at: string }[] };
 
 // Support queue (projection OFFICE_SUPPORT): most severe and soonest-due
@@ -42,6 +44,11 @@ export default async function OfficeSupport() {
                     <input name="body" required placeholder="Reply" className={`${inputClass} w-72`} />
                     <label className="text-xs text-text-secondary flex items-center gap-1"><input type="checkbox" name="internal:b" /> internal note</label>
                   </CommandForm>
+                  <ActionForm action={revealKinAction} submit="Next of kin" variant="ghost" inline>
+                    <input type="hidden" name="user_id" value={c.requester_user_id} />
+                    <input type="hidden" name="reference" value={c.case_id} />
+                    <input name="reason" required minLength={10} placeholder="Why the person cannot be reached" className={`${inputClass} w-64`} />
+                  </ActionForm>
                   <CommandForm sub="ADMIN_CONSOLE" command="RESOLVE_SUPPORT_CASE" fixed={{ case_id: c.case_id }} submit="Resolve" variant="ghost" inline>
                     <input name="resolution" required placeholder="Resolution (sent to the requester)" className={`${inputClass} w-72`} />
                   </CommandForm>

@@ -166,3 +166,27 @@ export async function secondaryProfileAction(_p: ActionState, fd: FormData): Pro
   refresh();
   return { ok: true, message: (res as { unchanged?: boolean } | null)?.unchanged ? "Already recorded — nothing changed." : "Saved." };
 }
+
+// --------------------------------------------- next of kin (Foundation user_relationship)
+export async function nominateKinAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const r = await rpc("fn_next_of_kin_nominate", { p_phone: String(fd.get("phone") ?? ""), p_full_name: String(fd.get("full_name") ?? "") });
+  return r?.ok ? { ok: true, message: "Named as your next of kin — they have been told." } : r;
+}
+export async function endKinAction(): Promise<ActionState> {
+  const r = await rpc("fn_next_of_kin_end", {});
+  return r?.ok ? { ok: true, message: "Removed." } : r;
+}
+export async function declineKinAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const r = await rpc("fn_next_of_kin_decline", { p_relationship_id: String(fd.get("relationship_id") ?? "") });
+  return r?.ok ? { ok: true, message: "Declined — they have been told." } : r;
+}
+// Office follow-up of an unreachable person (open support case). Audited in the database.
+export async function revealKinAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_office_next_of_kin_reveal", {
+    p_user_id: String(fd.get("user_id") ?? ""), p_reason: String(fd.get("reason") ?? ""), p_reference: String(fd.get("reference") ?? ""),
+  });
+  if (error) return { error: humanize(error.message) };
+  const d = data as { none: boolean; display_name?: string; phone?: string | null };
+  return { ok: true, message: d.none ? "No next of kin is registered for this person." : `Next of kin: ${d.display_name} · ${d.phone ?? "no verified phone"}` };
+}

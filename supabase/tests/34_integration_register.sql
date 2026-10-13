@@ -69,8 +69,8 @@ BEGIN
     PERFORM pg_temp.t_check('register: a live level cannot be recorded for a port whose live adapter is not built', ok, left(v, 160));
     SELECT string_agg(port_code::text || '=' || status_level, ' ' ORDER BY port_code::text) INTO v FROM trustride.integration_port_registry
     WHERE active AND port_code::text IN ('PAYMENT_GATEWAY', 'SMS_SERVICE', 'WHATSAPP_SERVICE', 'EMAIL_SERVICE', 'TELEMETRY_SERVICE', 'IDENTITY_AUTHORITY', 'NTSA_SERVICE', 'ETIMS_SERVICE');
-    PERFORM pg_temp.t_check('register: the evidenced levels (adapters built and tested: 6; boundary and simulator only: 5; telemetry 2: no simulator)',
-      v = 'EMAIL_SERVICE=6 ETIMS_SERVICE=5 IDENTITY_AUTHORITY=6 NTSA_SERVICE=5 PAYMENT_GATEWAY=6 SMS_SERVICE=6 TELEMETRY_SERVICE=2 WHATSAPP_SERVICE=6', v);
+    PERFORM pg_temp.t_check('register: the evidenced levels (adapters built and tested: 6; boundary and simulator only: 5; telemetry 6 since its simulator, suite 43)',
+      v = 'EMAIL_SERVICE=6 ETIMS_SERVICE=5 IDENTITY_AUTHORITY=6 NTSA_SERVICE=5 PAYMENT_GATEWAY=6 SMS_SERVICE=6 TELEMETRY_SERVICE=6 WHATSAPP_SERVICE=6', v);
   END IF;
 END
 $$;
