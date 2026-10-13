@@ -42,6 +42,13 @@ BEGIN
     r := pg_temp.t_cmd(admin, 'TRUSTRIDE_OFFICE', 'ADMIN_CONSOLE', 'REGISTER_SERVICE', t.payload::jsonb);
     PERFORM pg_temp.t_check('catalogue: ' || t.label || ' is refused', r->>'status' = 'REJECTED', r::text);
   END LOOP;
+  r := pg_temp.t_cmd(admin, 'TRUSTRIDE_OFFICE', 'ADMIN_CONSOLE', 'REGISTER_SERVICE', '{"service_code":"EA-ERRANDS-PRIORITY","service_name":"Priority Errands","macro_domain":"EXECUTIVE_ASSISTANTS","description":"Same-day errands.","fulfilment":"DISPATCH","pillar":"ERRANDS","ea_skill_category":"PERSONAL_SHOPPER_ERRAND"}');
+  PERFORM pg_temp.t_check('catalogue: a valid Executive Assistant service is registered with its pillar and an Engine 5-rated skill',
+    r->>'status' = 'TRANSLATED' AND (SELECT requirements->>'ea_skill_category' FROM trustride.service_catalogue WHERE service_code = 'EA-ERRANDS-PRIORITY') = 'PERSONAL_SHOPPER_ERRAND', r::text);
+  r := pg_temp.t_cmd(admin, 'TRUSTRIDE_OFFICE', 'ADMIN_CONSOLE', 'REGISTER_SERVICE', '{"service_code":"EA-ERRANDS-EXTRA","service_name":"X","macro_domain":"EXECUTIVE_ASSISTANTS","description":"x","fulfilment":"DISPATCH","pillar":"ERRANDS","ea_skill_category":"ASTRONAUT"}');
+  PERFORM pg_temp.t_check('catalogue: an unrated skill is refused for that reason', r->>'reason' ILIKE '%Engine 5 rates%', r::text);
+  r := pg_temp.t_cmd(admin, 'TRUSTRIDE_OFFICE', 'ADMIN_CONSOLE', 'REGISTER_SERVICE', '{"service_code":"EA-ERRANDS-EXTRA","service_name":"X","macro_domain":"EXECUTIVE_ASSISTANTS","description":"x","fulfilment":"DISPATCH","ea_skill_category":"PERSONAL_SHOPPER_ERRAND"}');
+  PERFORM pg_temp.t_check('catalogue: a missing pillar is refused for that reason', r->>'reason' ILIKE '%pillar%', r::text);
   r := pg_temp.t_cmd(cust, 'TRUSTRIDE_OFFICE', 'ADMIN_CONSOLE', 'REGISTER_SERVICE', '{"service_code":"TRANSPORT-BODA-FAKE","service_name":"X","macro_domain":"TRANSPORT","description":"x","fulfilment":"DISPATCH"}');
   PERFORM pg_temp.t_check('catalogue: a customer cannot change the catalogue', coalesce(r->>'status', '') <> 'TRANSLATED', r::text);
   PERFORM pg_temp.t_check('catalogue: the Engine 3 functions are not callable directly by signed-in users',
