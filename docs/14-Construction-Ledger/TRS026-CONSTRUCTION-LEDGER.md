@@ -624,3 +624,121 @@ No port is above 6: no credentials, and no live transaction.
 - Catalogue activation records no governance approval (the `approval_request` workflow is unbuilt).
 - Executive scenarios PEAK_DEMAND, FLEET_EXPANSION and ZONE_IMPACT need read grants to Engine 10.
 - The React form-reset behaviour (fields clear after a refused submission) is unchanged app-wide.
+
+## WP9 — Founder decisions and lifecycle coverage (2026-10-13)
+
+### Item 1: three incorrect identity submissions
+
+**Specifications.** No Foundation rule exists for attempt limits, lockout, reset or review; the limit of three is
+the Founder's direction.
+
+**Migration 060 (Foundation).** Every failed check is classified on its verification record.
+
+| Category | Results | Counted |
+|---|---|---|
+| INCORRECT_DATA | ID invalid / not found / deceased; names not matching; ID held by another identity | Yes |
+| INCONCLUSIVE | Outage, timeout, unreadable answer | No |
+| NOT_ACCEPTED_BY_RULE | Record found but not confirmable | No |
+| LEGACY_UNCLASSIFIED | Failures before this migration whose answer was not kept | No |
+
+- At three, every retry is refused in the database, checked under the identity's row lock.
+- Counting and the block are audited with references only, never the ID or a name.
+- The Foundation audit no longer copies the provider's personal fields.
+
+**Undefined (Founder decision):** how long the block lasts, what resets it, and who may lift it after review.
+The block stands until that is decided.
+
+**Evidence.**
+- Suite 40: **19/19**. It covers the first, second and third counts; the block; a fourth attempt refused; an
+  outage and a malformed answer not counted; direct paths closed; masked audit.
+- Parallel-retry race on two real connections (`concurrency/parallel_registration_retry.sh`): PASS. One
+  verification opened, the second waited on the lock and was refused.
+- j18 in the browser: "2 of 3", then "1 of 3", then blocked, with no retry form.
+
+### Item 2: next of kin
+
+**Investigation.** The rule is the Founder ruling of 2026-08-23, Step 3.3, recorded in the Foundation migration.
+The model is FDN-001 034 `user_relationship`, which existed but had no functions, screens or rows. Step 3.3 had
+diverged into a free-text note, closed in 056.
+
+**Migrations.**
+- **062:** next of kin as a NEXT_OF_KIN relationship to a verified TrustRide identity.
+  - No self-relationship; one active next of kin; history kept.
+  - Nomination by verified phone plus name, with no probing.
+  - The kin is notified and can decline. No access is implied.
+  - Office reveal: Founder or Administrator only, with a reason, for an open case or order in progress. Audited
+    without contact details.
+- **063:** the support projection carries the requester reference.
+
+**Gap (Founder decision):** a next of kin outside TrustRide has no Foundation representation. Options are in
+`docs/16-Lifecycle-Coverage/NEXT_OF_KIN_TRACEABILITY.md`.
+
+**Evidence.** Suite 42: **30/30**. j18: nominate, refusal without probing, notification, decline, Office reveal
+with name and verified phone.
+
+### Item 3: automatic catalogue access after the authorization gate
+
+**Rule.** TBOC Art.20.1 already orders Platform Access, Registration, Identity Verification, Authentication,
+Authorization, User Type Profile Activated, then Service Catalogue Access.
+
+**Defect.** Profile activation (`fn_business_actor_register`) and shell sessions did not check verification. An
+unverified person could open the Customer shell by calling the database directly. Proven red on staging (3 checks).
+
+**Migration 061 (Engines 4 and 11).** Both now require a verified identity.
+- Unchanged: a verified person's Customer profile still activates at once, with no manual approval, so the
+  catalogue opens automatically.
+- Each service's prerequisites still apply: coverage, Engine 5 price, verified M-Pesa phone, working hours.
+- Catalogue management stays with the Office.
+
+**Interpretation for the Founder.** Art.20.1 describes the profile as "socio-economic, education and societal
+positioning". Those data are consent-governed (FDN-001 030) and the Foundation records them as "never a hard
+block". "Profile established" is therefore implemented as the activated User Type Profile, not as mandatory
+socio-economic data. Making consent-based data a condition of service would undermine free consent.
+
+**Evidence.** Suite 41: **16/16**. j18: a blocked person cannot reach the dashboard.
+
+### Item 4: Engine 10
+
+Investigation only; no access changed. Data needs, owners and options are in
+`docs/16-Lifecycle-Coverage/ENGINE_10_SCENARIO_DATA_REQUIREMENTS.md`.
+
+**Recommendation:** aggregate snapshot signals through Engines 7/8, starting with FLEET_EXPANSION. The decision is
+the Founder's.
+
+### Item 5: lifecycle coverage and the Protrack simulator
+
+**Migration 064.**
+- Provider and simulator share one Engine 6 normalisation step.
+- The deterministic simulator covers valid, duplicate, out-of-order, stale, malformed, unknown-device,
+  unauthorized, timeout and outage readings, and recovery. It refuses to run while the port is live.
+- Every simulated reading is marked in Engine 6 and Engine 2.
+- **Engine 2 defect fixed:** a re-sent point was stored twice in the location history.
+- Protrack moves to register level 6.
+
+**Migration 065 (defects found by the lifecycle suite in my own 058).**
+- Executive Assistant services could not be registered at all (enum compared with text).
+- A missing pillar was not refused.
+- Suite 38 had asserted only "rejected"; it now proves a valid registration and the refusal reasons.
+
+**Evidence.**
+- Suite 43: **18/18**.
+- Suite 44: **124/124**. All 16 dispatched services were exercised through the seven stages; 13 end to end, and 3
+  correctly stopped at pricing pending the Founder's occupation decision.
+- The coverage matrix is in `docs/16-Lifecycle-Coverage/LIFECYCLE_COVERAGE_MATRIX.md`.
+
+### Test changes, with evidence
+
+- **Suite 34:** Protrack's expected level moved from 2 to 6, because the simulator now exists (suite 43).
+- **Suite 28:** the alert check now ages any earlier alert inside its rolled-back transaction. Staging's real
+  06:00 watch had already alerted today and correctly de-duplicated. A de-duplication check was added.
+
+### Regression
+
+- **Staging: 44 suites, 1,059/1,059.** Engine 5 fingerprint identical (463 rows).
+- **Browser (local, fresh build):**
+  - j18 **14/14**;
+  - j17 rerun **33/33**.
+
+### Migrations this WP
+
+060–065, all on staging.

@@ -26,9 +26,15 @@ BEGIN
   IF NOT ready THEN
     PERFORM pg_temp.t_check('EPRA cycle recording exists', false, 'fn_integration_epra_cycle_record absent');
   ELSE
+    -- The real daily watch may already have alerted today; age that alert (rolled back) so this run is observable.
+    UPDATE trustride.present_notification_inbox SET delivered_at = now() - interval '21 hours'
+    WHERE title = 'EPRA prices for the current cycle are not recorded' AND delivered_at > now() - interval '20 hours';
     n := trustride.fn_integration_epra_freshness_watch();
     PERFORM pg_temp.t_check('a missing current EPRA cycle is reported to the Office', n >= 1
       AND EXISTS (SELECT 1 FROM trustride.present_notification_inbox WHERE recipient_user_id = founder AND title = 'EPRA prices for the current cycle are not recorded'), n::text);
+    PERFORM trustride.fn_integration_epra_freshness_watch();
+    PERFORM pg_temp.t_check('the missing-cycle alert is not repeated within 20 hours',
+      (SELECT count(*) FROM trustride.present_notification_inbox WHERE recipient_user_id = founder AND title = 'EPRA prices for the current cycle are not recorded') = 1);
 
     -- ============ recording a published cycle (as the Office, through the command)
     v := (pg_temp.t_cmd(founder, 'TRUSTRIDE_OFFICE', 'ADMIN_CONSOLE', 'RECORD_EPRA_PRICE_CYCLE', jsonb_build_object(
